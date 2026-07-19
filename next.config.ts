@@ -20,6 +20,8 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 3600,
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      // Placeholder images for dummy preview products (remove with dummy-data.ts).
+      { protocol: 'https', hostname: 'picsum.photos' },
       // Legacy images uploaded before the switch to local storage still live on Cloudinary.
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: '*.cloudinary.com' },

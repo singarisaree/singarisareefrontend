@@ -59,8 +59,7 @@ export default function AdminSettingsPage() {
   const [announcementText, setAnnouncementText] = useState(
     "FREE SHIPPING on Orders Above Rs. 1999",
   );
-  const [announcementSecondary, setAnnouncementSecondary] =
-    useState("COD Available");
+  const [announcementSecondary, setAnnouncementSecondary] = useState("");
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -169,7 +168,7 @@ export default function AdminSettingsPage() {
       ),
     );
     setAnnouncementSecondary(
-      String(map.announcement_bar_secondary_text ?? "COD Available"),
+      String(map.announcement_bar_secondary_text ?? ""),
     );
   }, [announcementSettings]);
 

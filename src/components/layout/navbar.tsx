@@ -131,7 +131,7 @@ export function Navbar() {
     String(settings?.announcement_bar_enabled) === 'true';
   const announcementMain =
     settings?.announcement_bar_text || 'FREE SHIPPING on Orders Above Rs. 1999';
-  const announcementSecondary = settings?.announcement_bar_secondary_text || 'COD Available';
+  const announcementSecondary = settings?.announcement_bar_secondary_text || '';
 
   if (pathname.startsWith('/admin')) return null;
 
