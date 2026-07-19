@@ -12,16 +12,31 @@
  */
 import type { Category, HeroBanner, Product, PublicSettings } from '@/types';
 
-/** Deterministic placeholder image (Picsum). Allowed in next.config remotePatterns. */
-function img(seed: string): string {
-  return `https://picsum.photos/seed/${seed}/800/1000`;
+/** Real saree photos from Unsplash (host allowed in next.config remotePatterns). */
+const SAREE_PHOTOS = {
+  redGold: 'photo-1717835943315-b818e90cb2a1', // red & gold sari
+  traditional: 'photo-1771507056578-f9675a2a8f8a', // traditional saree + jewellery
+  greenRedCotton: 'photo-1771654099745-73a4a4d09bcd', // green/red cotton saree
+  greenSari: 'photo-1771654805161-442c6aab7b55', // green sari
+  purpleSari: 'photo-1758985402638-6028bae83b98', // purple sari
+  maroonBride: 'photo-1769500805415-0f9485e70e5b', // maroon bridal saree
+} as const;
+
+/** Build a sized Unsplash URL for a given photo id. */
+function img(photoId: string, width = 800, height = 1000): string {
+  return `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=${width}&h=${height}&q=80`;
+}
+
+/** Wide (landscape) variant for hero banners. */
+function banner(photoId: string): string {
+  return `https://images.unsplash.com/${photoId}?auto=format&fit=crop&w=1920&h=900&q=80`;
 }
 
 export const dummyCategories: Category[] = [
-  { id: 'dummy-cat-1', name: 'Silk Sarees', slug: 'silk-sarees', imageUrl: img('silk-cat'), sortOrder: 0, isActive: true, _count: { products: 2 } },
-  { id: 'dummy-cat-2', name: 'Cotton Sarees', slug: 'cotton-sarees', imageUrl: img('cotton-cat'), sortOrder: 1, isActive: true, _count: { products: 2 } },
-  { id: 'dummy-cat-3', name: 'Banarasi Sarees', slug: 'banarasi-sarees', imageUrl: img('banarasi-cat'), sortOrder: 2, isActive: true, _count: { products: 2 } },
-  { id: 'dummy-cat-4', name: 'Designer Sarees', slug: 'designer-sarees', imageUrl: img('designer-cat'), sortOrder: 3, isActive: true, _count: { products: 2 } },
+  { id: 'dummy-cat-1', name: 'Silk Sarees', slug: 'silk-sarees', imageUrl: img(SAREE_PHOTOS.redGold), sortOrder: 0, isActive: true, _count: { products: 2 } },
+  { id: 'dummy-cat-2', name: 'Cotton Sarees', slug: 'cotton-sarees', imageUrl: img(SAREE_PHOTOS.greenRedCotton), sortOrder: 1, isActive: true, _count: { products: 2 } },
+  { id: 'dummy-cat-3', name: 'Banarasi Sarees', slug: 'banarasi-sarees', imageUrl: img(SAREE_PHOTOS.maroonBride), sortOrder: 2, isActive: true, _count: { products: 2 } },
+  { id: 'dummy-cat-4', name: 'Designer Sarees', slug: 'designer-sarees', imageUrl: img(SAREE_PHOTOS.purpleSari), sortOrder: 3, isActive: true, _count: { products: 2 } },
 ];
 
 function makeProduct(params: {
@@ -33,14 +48,15 @@ function makeProduct(params: {
   categorySlug: string;
   price: number;
   mrp: number;
-  seed: string;
+  photo: string;
+  photo2: string;
   fabric?: string;
   featured?: boolean;
 }): Product {
   const fabric = params.fabric ?? 'Silk';
   const discount = Math.max(0, Math.round(((params.mrp - params.price) / params.mrp) * 100));
-  const primary = img(params.seed);
-  const secondary = img(`${params.seed}-b`);
+  const primary = img(params.photo);
+  const secondary = img(params.photo2);
   return {
     id: params.id,
     name: params.name,
@@ -89,19 +105,19 @@ function makeProduct(params: {
 }
 
 export const dummyProducts: Product[] = [
-  makeProduct({ id: 'dummy-p1', name: 'Kanchipuram Silk Saree', slug: 'kanchipuram-silk-saree', categoryId: 'dummy-cat-1', categoryName: 'Silk Sarees', categorySlug: 'silk-sarees', price: 4999, mrp: 7999, seed: 'saree1', fabric: 'Silk', featured: true }),
-  makeProduct({ id: 'dummy-p2', name: 'Mysore Pure Silk Saree', slug: 'mysore-pure-silk-saree', categoryId: 'dummy-cat-1', categoryName: 'Silk Sarees', categorySlug: 'silk-sarees', price: 3799, mrp: 5999, seed: 'saree2' }),
-  makeProduct({ id: 'dummy-p3', name: 'Handloom Cotton Saree', slug: 'handloom-cotton-saree', categoryId: 'dummy-cat-2', categoryName: 'Cotton Sarees', categorySlug: 'cotton-sarees', price: 1499, mrp: 2499, seed: 'saree3', fabric: 'Cotton', featured: true }),
-  makeProduct({ id: 'dummy-p4', name: 'Jamdani Cotton Saree', slug: 'jamdani-cotton-saree', categoryId: 'dummy-cat-2', categoryName: 'Cotton Sarees', categorySlug: 'cotton-sarees', price: 1899, mrp: 2999, seed: 'saree4', fabric: 'Cotton' }),
-  makeProduct({ id: 'dummy-p5', name: 'Banarasi Silk Saree', slug: 'banarasi-silk-saree', categoryId: 'dummy-cat-3', categoryName: 'Banarasi Sarees', categorySlug: 'banarasi-sarees', price: 5499, mrp: 8999, seed: 'saree5', fabric: 'Silk', featured: true }),
-  makeProduct({ id: 'dummy-p6', name: 'Katan Banarasi Saree', slug: 'katan-banarasi-saree', categoryId: 'dummy-cat-3', categoryName: 'Banarasi Sarees', categorySlug: 'banarasi-sarees', price: 6299, mrp: 9999, seed: 'saree6', fabric: 'Silk' }),
-  makeProduct({ id: 'dummy-p7', name: 'Designer Georgette Saree', slug: 'designer-georgette-saree', categoryId: 'dummy-cat-4', categoryName: 'Designer Sarees', categorySlug: 'designer-sarees', price: 2799, mrp: 4499, seed: 'saree7', fabric: 'Georgette', featured: true }),
-  makeProduct({ id: 'dummy-p8', name: 'Embroidered Party Saree', slug: 'embroidered-party-saree', categoryId: 'dummy-cat-4', categoryName: 'Designer Sarees', categorySlug: 'designer-sarees', price: 3299, mrp: 5299, seed: 'saree8', fabric: 'Net' }),
+  makeProduct({ id: 'dummy-p1', name: 'Kanchipuram Silk Saree', slug: 'kanchipuram-silk-saree', categoryId: 'dummy-cat-1', categoryName: 'Silk Sarees', categorySlug: 'silk-sarees', price: 4999, mrp: 7999, photo: SAREE_PHOTOS.redGold, photo2: SAREE_PHOTOS.traditional, fabric: 'Silk', featured: true }),
+  makeProduct({ id: 'dummy-p2', name: 'Mysore Pure Silk Saree', slug: 'mysore-pure-silk-saree', categoryId: 'dummy-cat-1', categoryName: 'Silk Sarees', categorySlug: 'silk-sarees', price: 3799, mrp: 5999, photo: SAREE_PHOTOS.purpleSari, photo2: SAREE_PHOTOS.greenSari }),
+  makeProduct({ id: 'dummy-p3', name: 'Handloom Cotton Saree', slug: 'handloom-cotton-saree', categoryId: 'dummy-cat-2', categoryName: 'Cotton Sarees', categorySlug: 'cotton-sarees', price: 1499, mrp: 2499, photo: SAREE_PHOTOS.greenRedCotton, photo2: SAREE_PHOTOS.greenSari, fabric: 'Cotton', featured: true }),
+  makeProduct({ id: 'dummy-p4', name: 'Jamdani Cotton Saree', slug: 'jamdani-cotton-saree', categoryId: 'dummy-cat-2', categoryName: 'Cotton Sarees', categorySlug: 'cotton-sarees', price: 1899, mrp: 2999, photo: SAREE_PHOTOS.greenSari, photo2: SAREE_PHOTOS.greenRedCotton, fabric: 'Cotton' }),
+  makeProduct({ id: 'dummy-p5', name: 'Banarasi Silk Saree', slug: 'banarasi-silk-saree', categoryId: 'dummy-cat-3', categoryName: 'Banarasi Sarees', categorySlug: 'banarasi-sarees', price: 5499, mrp: 8999, photo: SAREE_PHOTOS.maroonBride, photo2: SAREE_PHOTOS.redGold, fabric: 'Silk', featured: true }),
+  makeProduct({ id: 'dummy-p6', name: 'Katan Banarasi Saree', slug: 'katan-banarasi-saree', categoryId: 'dummy-cat-3', categoryName: 'Banarasi Sarees', categorySlug: 'banarasi-sarees', price: 6299, mrp: 9999, photo: SAREE_PHOTOS.traditional, photo2: SAREE_PHOTOS.maroonBride, fabric: 'Silk' }),
+  makeProduct({ id: 'dummy-p7', name: 'Designer Georgette Saree', slug: 'designer-georgette-saree', categoryId: 'dummy-cat-4', categoryName: 'Designer Sarees', categorySlug: 'designer-sarees', price: 2799, mrp: 4499, photo: SAREE_PHOTOS.purpleSari, photo2: SAREE_PHOTOS.maroonBride, fabric: 'Georgette', featured: true }),
+  makeProduct({ id: 'dummy-p8', name: 'Embroidered Party Saree', slug: 'embroidered-party-saree', categoryId: 'dummy-cat-4', categoryName: 'Designer Sarees', categorySlug: 'designer-sarees', price: 3299, mrp: 5299, photo: SAREE_PHOTOS.redGold, photo2: SAREE_PHOTOS.purpleSari, fabric: 'Net' }),
 ];
 
 export const dummyBanners: HeroBanner[] = [
-  { id: 'dummy-banner-1', title: 'The Festive Edit', subtitle: 'Handpicked silks for every celebration', imageUrl: img('hero1'), linkUrl: '/collections', sortOrder: 0, isActive: true },
-  { id: 'dummy-banner-2', title: 'Everyday Elegance', subtitle: 'Soft cottons, effortless drape', imageUrl: img('hero2'), linkUrl: '/collections', sortOrder: 1, isActive: true },
+  { id: 'dummy-banner-1', title: 'The Festive Edit', subtitle: 'Handpicked silks for every celebration', imageUrl: banner(SAREE_PHOTOS.redGold), linkUrl: '/collections', sortOrder: 0, isActive: true },
+  { id: 'dummy-banner-2', title: 'Everyday Elegance', subtitle: 'Soft cottons, effortless drape', imageUrl: banner(SAREE_PHOTOS.greenRedCotton), linkUrl: '/collections', sortOrder: 1, isActive: true },
 ];
 
 export const dummySettings: PublicSettings = {
