@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-cream: #fcf9f6;
+  --color-ivory: #fffaf7;
+  --color-beige: #f5ede6;
+  --color-maroon: #7a0012;
+  --color-maroon-dark: #5c000e;
+  --color-maroon-light: #9a1a2e;
+  --color-gold: #c5a059;
+  --color-gold-dark: #a8843f;
+  --color-gold-light: #d4b87a;
+  --color-charcoal: #333333;
+  --color-charcoal-dark: #1a1a1a;
+  --color-muted: #666666;
+  --color-background: var(--color-cream);
+  --color-foreground: var(--color-charcoal);
+  --font-serif: var(--font-playfair);
+  --font-sans: var(--font-poppins);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-cream);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+::selection {
+  background-color: var(--color-maroon);
+  color: #fff;
+}
+
+/* Mandala / rangoli decorative pattern */
+.pattern-mandala {
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%237a0012' fill-opacity='0.04'%3E%3Cpath d='M30 0l4 8 8 2-6 6 2 8-8-4-8 4 2-8-6-6 8-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.luxury-card {
+  background: #fff;
+  border: 1px solid rgba(122, 0, 18, 0.08);
+  border-radius: 0.25rem;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.luxury-card:hover {
+  border-color: rgba(122, 0, 18, 0.2);
+  box-shadow: 0 0.5rem 1.5rem rgba(122, 0, 18, 0.08);
+  transform: translateY(-0.2rem);
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(1.5rem); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes navigation-progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-beige) 25%, var(--color-cream) 50%, var(--color-beige) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Announcement bar: single-line horizontal scroll when text exceeds width */
+.announcement-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+}
+
+.announcement-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.announcement-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.announcement-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
 }

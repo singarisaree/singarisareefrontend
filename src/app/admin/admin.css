@@ -1,0 +1,30 @@
+/* Admin panel theme — Tacnique-style corporate console */
+.admin-root {
+  --admin-navy: #0f172a;
+  --admin-navy-hover: #1e293b;
+  --admin-sidebar: #f8fafc;
+  --admin-border: #e2e8f0;
+  --admin-muted: #64748b;
+  --admin-bg: #f1f5f9;
+  --admin-success: #16a34a;
+  --admin-success-bg: #dcfce7;
+  --admin-inactive-bg: #f1f5f9;
+  --admin-inactive-text: #64748b;
+}
+
+.admin-root {
+  background-color: var(--admin-bg);
+  min-height: 100vh;
+  font-family: var(--font-poppins), system-ui, sans-serif;
+}
+
+/* Storefront uses Playfair on headings; admin uses Poppins throughout */
+.admin-root h1,
+.admin-root h2,
+.admin-root h3,
+.admin-root h4,
+.admin-root h5,
+.admin-root h6 {
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  letter-spacing: normal;
+}
