@@ -2,34 +2,8 @@ import { unstable_cache } from 'next/cache';
 import { cache } from 'react';
 import { API_BASE_URL } from '@/lib/api-origin';
 import type { Category, CustomerReview, HeroBanner, Product, PublicSettings } from '@/types';
-// DUMMY DATA (remove this import + the withDummyFallback wrappers below to delete preview content)
-import {
-  dummyCategories,
-  dummyCollectionsPage,
-  dummyCategoryPage,
-  dummyHomepage,
-  dummyProductBySlug,
-  dummyProducts,
-  dummyRelated,
-} from '@/lib/dummy-data';
 
 const API_URL = API_BASE_URL;
-
-/**
- * DUMMY FALLBACK: when the backend is unreachable, return sample preview content
- * instead of failing. Only catches SERVER_UNREACHABLE — real API errors still throw.
- * Remove this helper (and its usages) once real data is available.
- */
-async function withDummyFallback<T>(loader: () => Promise<T>, fallback: () => T): Promise<T> {
-  try {
-    return await loader();
-  } catch (error) {
-    if (error instanceof Error && error.message === 'SERVER_UNREACHABLE') {
-      return fallback();
-    }
-    throw error;
-  }
-}
 
 class ApiNotFoundError extends Error {
   constructor(path: string) {
@@ -112,45 +86,26 @@ function cached<T>(
 export const serverStore = {
   getProducts: (params?: Record<string, string>) => {
     const key = `products:${JSON.stringify(params ?? {})}`;
-    return cached(
-      key,
-      120,
-      () => withDummyFallback(() => rawGet<Product[]>('/products', params), () => dummyProducts),
-      ['storefront-products'],
-    );
+    return cached(key, 120, () => rawGet<Product[]>('/products', params), ['storefront-products']);
   },
   /** Live product list for generateStaticParams */
   getProductsFresh: (params?: Record<string, string>) =>
-    withDummyFallback(() => rawGetFresh<Product[]>('/products', params), () => dummyProducts),
+    rawGetFresh<Product[]>('/products', params),
   getProductBySlug: (slug: string) =>
     cached(
       `product-slug:${slug}`,
       120,
-      () =>
-        withDummyFallback(
-          () => rawGetOrNull<Product>(`/products/slug/${slug}/storefront`),
-          () => dummyProductBySlug(slug),
-        ),
+      () => rawGetOrNull<Product>(`/products/slug/${slug}/storefront`),
       ['storefront-products'],
     ),
   getCategories: () =>
-    cached(
-      'categories',
-      120,
-      () => withDummyFallback(() => rawGet<Category[]>('/categories'), () => dummyCategories),
-      ['storefront-categories'],
-    ),
-  getCategoriesFresh: () =>
-    withDummyFallback(() => rawGetFresh<Category[]>('/categories'), () => dummyCategories),
+    cached('categories', 120, () => rawGet<Category[]>('/categories'), ['storefront-categories']),
+  getCategoriesFresh: () => rawGetFresh<Category[]>('/categories'),
   getCategoryBySlug: (slug: string) =>
     cached(
       `category-slug:${slug}`,
       120,
-      () =>
-        withDummyFallback(
-          () => rawGetOrNull<Category>(`/categories/slug/${slug}`),
-          () => dummyCategoryPage(slug).category,
-        ),
+      () => rawGetOrNull<Category>(`/categories/slug/${slug}`),
       ['storefront-categories'],
     ),
   getCategoryPage: (slug: string) =>
@@ -158,12 +113,8 @@ export const serverStore = {
       `category-page:${slug}`,
       120,
       () =>
-        withDummyFallback(
-          () =>
-            rawGetOrNull<{ category: Category; categories: Category[]; products: Product[] }>(
-              `/categories/slug/${slug}/storefront`,
-            ),
-          () => dummyCategoryPage(slug),
+        rawGetOrNull<{ category: Category; categories: Category[]; products: Product[] }>(
+          `/categories/slug/${slug}/storefront`,
         ),
       ['storefront-categories', 'storefront-products'],
     ),
@@ -178,27 +129,19 @@ export const serverStore = {
       'storefront-homepage',
       120,
       () =>
-        withDummyFallback(
-          () =>
-            rawGet<{
-              banners: HeroBanner[];
-              categories: Category[];
-              products: Product[];
-              settings: PublicSettings;
-            }>('/storefront/homepage'),
-          () => dummyHomepage(),
-        ),
+        rawGet<{
+          banners: HeroBanner[];
+          categories: Category[];
+          products: Product[];
+          settings: PublicSettings;
+        }>('/storefront/homepage'),
       ['storefront-homepage', 'storefront-banners', 'storefront-categories', 'storefront-products', 'storefront-settings'],
     ),
   getCollectionsPage: () =>
     cached(
       'storefront-collections',
       120,
-      () =>
-        withDummyFallback(
-          () => rawGet<{ categories: Category[]; products: Product[] }>('/storefront/collections'),
-          () => dummyCollectionsPage(),
-        ),
+      () => rawGet<{ categories: Category[]; products: Product[] }>('/storefront/collections'),
       ['storefront-collections', 'storefront-categories', 'storefront-products'],
     ),
   getProductReviews: (productId: string) =>
@@ -209,11 +152,7 @@ export const serverStore = {
     cached(
       `product-related:${productId}:${limit}`,
       120,
-      () =>
-        withDummyFallback(
-          () => rawGet<Product[]>(`/products/${productId}/related`, { limit: String(limit) }),
-          () => dummyRelated(productId, limit),
-        ),
+      () => rawGet<Product[]>(`/products/${productId}/related`, { limit: String(limit) }),
       ['storefront-products'],
     ),
 };

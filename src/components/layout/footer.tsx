@@ -93,6 +93,7 @@ export function Footer({ settings }: FooterProps) {
               <li><Link href="/refund-policy" className="transition-colors hover:text-white">Returns &amp; Exchange</Link></li>
               <li><Link href="/terms" className="transition-colors hover:text-white">Terms &amp; Conditions</Link></li>
               <li><Link href="/privacy-policy" className="transition-colors hover:text-white">Privacy Policy</Link></li>
+              <li><Link href="/data-deletion" className="transition-colors hover:text-white">Data Deletion</Link></li>
             </ul>
           </div>
 
