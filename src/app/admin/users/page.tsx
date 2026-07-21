@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { OptimizedImage } from '@/components/ui/optimized-image';
 import Link from 'next/link';
@@ -23,6 +23,7 @@ import {
   adminCustomerService,
   adminMarketingService,
   adminSettingsService,
+  type WhatsAppTemplateRecord,
 } from '@/services/admin.service';
 import type { StoreCustomer } from '@/types';
 import { StatCard } from '@/components/admin/stat-card';
@@ -45,10 +46,27 @@ import {
   useAdminDateRangeParam,
 } from '@/lib/use-admin-list-filters';
 import { AdminPagination } from '@/components/admin/admin-pagination';
-import { MARKETING_TEMPLATES, renderMarketingPreview } from '@/lib/marketing-templates';
+import { renderMarketingPreview } from '@/lib/marketing-templates';
 import { EmailMarketingPanel } from '@/components/admin/email-marketing-panel';
 
 type Tab = 'users' | 'marketing' | 'email-marketing';
+
+const MARKETING_TEMPLATE_KINDS = ['marketing_text', 'marketing_image'] as const;
+type MarketingTemplateKind = (typeof MARKETING_TEMPLATE_KINDS)[number];
+
+const MARKETING_TEMPLATE_TITLES: Record<MarketingTemplateKind, string> = {
+  marketing_text: 'Text marketing',
+  marketing_image: 'Image marketing',
+};
+
+function applyWhatsAppTemplateExamples(template: WhatsAppTemplateRecord) {
+  return {
+    heading: template.examples[1] ?? '',
+    story: template.examples[2] ?? '',
+    campaignLink: template.examples[3] ?? '',
+    previewName: template.examples[0] ?? 'Priya',
+  };
+}
 
 const SOURCE_VALUES = ['ALL', 'ORDER', 'VIP', 'MANUAL'] as const;
 
@@ -76,9 +94,11 @@ export default function AdminUsersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', phone: '', email: '', notes: '' });
 
-  const [templateKey, setTemplateKey] = useState('new-collection');
-  const [heading, setHeading] = useState<string>(MARKETING_TEMPLATES[0].heading);
-  const [story, setStory] = useState<string>(MARKETING_TEMPLATES[0].story);
+  const marketingInitialized = useRef(false);
+  const [selectedTemplateKind, setSelectedTemplateKind] =
+    useState<MarketingTemplateKind>('marketing_text');
+  const [heading, setHeading] = useState('');
+  const [story, setStory] = useState('');
   const [campaignLink, setCampaignLink] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [previewName, setPreviewName] = useState('Priya');
@@ -123,11 +143,32 @@ export default function AdminUsersPage() {
     queryFn: () => adminSettingsService.getWhatsAppTemplates(),
     enabled: tab === 'marketing',
   });
-  const requiredMetaTemplate = whatsAppTemplates.find(
-    (template) => template.kind === (imageUrl ? 'marketing_image' : 'marketing_text'),
+
+  const marketingWhatsAppTemplates = useMemo(
+    () =>
+      MARKETING_TEMPLATE_KINDS.map((kind) =>
+        whatsAppTemplates.find((template) => template.kind === kind),
+      ).filter((template): template is WhatsAppTemplateRecord => Boolean(template)),
+    [whatsAppTemplates],
+  );
+
+  useEffect(() => {
+    if (marketingInitialized.current || marketingWhatsAppTemplates.length === 0) return;
+    const first = marketingWhatsAppTemplates[0];
+    marketingInitialized.current = true;
+    setSelectedTemplateKind(first.kind as MarketingTemplateKind);
+    const examples = applyWhatsAppTemplateExamples(first);
+    setHeading(examples.heading);
+    setStory(examples.story);
+    setCampaignLink(examples.campaignLink);
+    setPreviewName(examples.previewName);
+  }, [marketingWhatsAppTemplates]);
+
+  const selectedMetaTemplate = whatsAppTemplates.find(
+    (template) => template.kind === selectedTemplateKind,
   );
   const metaTemplateAvailable =
-    requiredMetaTemplate?.status === 'APPROVED' && requiredMetaTemplate.isActive;
+    selectedMetaTemplate?.status === 'APPROVED' && selectedMetaTemplate.isActive;
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -149,7 +190,7 @@ export default function AdminUsersPage() {
   const sendMutation = useMutation({
     mutationFn: () =>
       adminMarketingService.send({
-        templateKey,
+        templateKey: selectedTemplateKind,
         heading,
         story,
         campaignLink: campaignLink.trim(),
@@ -182,12 +223,18 @@ export default function AdminUsersPage() {
 
   const previewMessage = renderMarketingPreview(heading, story, previewName);
 
-  const applyTemplate = (key: string) => {
-    const template = MARKETING_TEMPLATES.find((t) => t.key === key);
+  const selectMarketingTemplate = (kind: MarketingTemplateKind) => {
+    const template = whatsAppTemplates.find((item) => item.kind === kind);
     if (!template) return;
-    setTemplateKey(key);
-    setHeading(template.heading);
-    setStory(template.story);
+    setSelectedTemplateKind(kind);
+    const examples = applyWhatsAppTemplateExamples(template);
+    setHeading(examples.heading);
+    setStory(examples.story);
+    setCampaignLink(examples.campaignLink);
+    setPreviewName(examples.previewName);
+    if (kind === 'marketing_text') {
+      setImageUrl('');
+    }
   };
 
   const toggleSelect = (id: string) => {
@@ -213,6 +260,7 @@ export default function AdminUsersPage() {
     try {
       const result = await adminMarketingService.uploadImage(file);
       setImageUrl(result.imageUrl);
+      setSelectedTemplateKind('marketing_image');
       toast.success('Image uploaded');
     } catch {
       toast.error('Image upload failed');
@@ -397,50 +445,61 @@ export default function AdminUsersPage() {
         <div className="grid gap-6 xl:grid-cols-2">
           <div className="space-y-6">
             <section className="rounded-xl border border-[#e2e8f0] bg-white p-5 shadow-sm">
-              <h2 className="text-base font-semibold text-[#0f172a]">Message Templates</h2>
-              <p className="mt-1 text-sm text-[#64748b]">Pick a template, then edit heading & story. Use {'{{name}}'} for dynamic name.</p>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {MARKETING_TEMPLATES.map((template) => (
-                  <button
-                    key={template.key}
-                    type="button"
-                    onClick={() => applyTemplate(template.key)}
-                    className={`rounded-lg border p-3 text-left transition-colors ${
-                      templateKey === template.key
-                        ? 'border-[#0f172a] bg-[#f8fafc]'
-                        : 'border-[#e2e8f0] hover:border-[#cbd5e1]'
-                    }`}
-                  >
-                    <p className="text-sm font-semibold text-[#0f172a]">{template.name}</p>
-                    <p className="mt-1 text-xs text-[#64748b]">{template.description}</p>
-                  </button>
-                ))}
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {(['marketing_text', 'marketing_image'] as const).map((kind) => {
-                  const template = whatsAppTemplates.find((item) => item.kind === kind);
-                  const selected = kind === (imageUrl ? 'marketing_image' : 'marketing_text');
-                  const available = template?.status === 'APPROVED' && template.isActive;
-                  return (
-                    <div key={kind} className={`rounded-lg border p-3 ${selected ? 'border-green-500 bg-green-50' : 'border-[#e2e8f0]'}`}>
-                      <p className="text-sm font-semibold text-[#0f172a]">
-                        {kind === 'marketing_image' ? 'Meta image template' : 'Meta text template'}
-                      </p>
-                      <p className={`mt-1 text-xs font-medium ${available ? 'text-green-700' : 'text-amber-700'}`}>
-                        {available ? 'Approved and active' : 'Unavailable — approve and activate in Settings'}
-                        {selected ? ' · Will be used' : ''}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+              <h2 className="text-base font-semibold text-[#0f172a]">WhatsApp Templates</h2>
+              <p className="mt-1 text-sm text-[#64748b]">
+                Templates from{' '}
+                <Link href="/admin/settings" className="font-medium text-[#0f172a] underline">
+                  Settings → WhatsApp Templates
+                </Link>
+                . Pick one, then edit heading, story, and link.
+              </p>
+              {marketingWhatsAppTemplates.length === 0 ? (
+                <p className="mt-4 text-sm text-amber-700">
+                  No marketing templates found. Configure text and image marketing templates in Settings.
+                </p>
+              ) : (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {MARKETING_TEMPLATE_KINDS.map((kind) => {
+                    const template = whatsAppTemplates.find((item) => item.kind === kind);
+                    if (!template) return null;
+                    const selected = selectedTemplateKind === kind;
+                    const available = template.status === 'APPROVED' && template.isActive;
+                    return (
+                      <button
+                        key={kind}
+                        type="button"
+                        onClick={() => selectMarketingTemplate(kind)}
+                        className={`rounded-lg border p-3 text-left transition-colors ${
+                          selected
+                            ? 'border-[#0f172a] bg-[#f8fafc]'
+                            : 'border-[#e2e8f0] hover:border-[#cbd5e1]'
+                        }`}
+                      >
+                        <p className="text-sm font-semibold text-[#0f172a]">
+                          {MARKETING_TEMPLATE_TITLES[kind]}
+                        </p>
+                        <p className="mt-1 text-xs text-[#64748b]">{template.name}</p>
+                        <p
+                          className={`mt-2 text-xs font-medium ${available ? 'text-green-700' : 'text-amber-700'}`}
+                        >
+                          {available
+                            ? 'Approved and active'
+                            : `${template.status} — approve and activate in Settings`}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </section>
 
             <section className="rounded-xl border border-[#e2e8f0] bg-white p-5 shadow-sm space-y-4">
               <h2 className="text-base font-semibold text-[#0f172a]">Compose Message</h2>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-[#334155]">Image (optional)</label>
+                <label className="text-sm font-medium text-[#334155]">
+                  Image {selectedTemplateKind === 'marketing_image' ? '(required)' : '(optional)'}
+                </label>
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
@@ -530,7 +589,15 @@ export default function AdminUsersPage() {
                 )}
                 <button
                   type="button"
-                  disabled={sendMutation.isPending || !heading.trim() || !story.trim() || !/^https?:\/\/\S+$/i.test(campaignLink.trim()) || !metaTemplateAvailable || (!sendToAll && selectedIds.size === 0)}
+                  disabled={
+                    sendMutation.isPending ||
+                    !heading.trim() ||
+                    !story.trim() ||
+                    !/^https?:\/\/\S+$/i.test(campaignLink.trim()) ||
+                    !metaTemplateAvailable ||
+                    (selectedTemplateKind === 'marketing_image' && !imageUrl) ||
+                    (!sendToAll && selectedIds.size === 0)
+                  }
                   onClick={() => {
                     if (!window.confirm('Send WhatsApp marketing message to selected users?')) return;
                     sendMutation.mutate();
