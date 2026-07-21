@@ -70,7 +70,10 @@ export default function AdminReviewsPage() {
     queryFn: () => adminProductService.getAll({ limit: '100', isActive: 'true' }),
     staleTime: 60 * 1000,
   });
-  const products = Array.isArray(productsData) ? productsData : [];
+  const products = useMemo(
+    () => (Array.isArray(productsData) ? productsData : []),
+    [productsData],
+  );
 
   const activeProducts = useMemo(
     () => products.filter((p: Product) => p.isActive),

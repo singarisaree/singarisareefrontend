@@ -62,8 +62,8 @@ export function OrderPaymentStatusNotice({
         </h3>
         <p className={cn('mt-2 text-sm', isAdmin ? 'text-amber-800' : 'text-amber-800')}>
           {isAdmin
-            ? 'Waiting for payment confirmation. Status will update automatically once payment succeeds or fails.'
-            : "We're confirming your payment. If you left the payment screen, you can complete payment — no amount has been debited yet."}
+            ? 'Waiting for payment confirmation. Status updates automatically.'
+            : 'We are confirming your payment. This page updates automatically — no action needed.'}
         </p>
       </div>
     );

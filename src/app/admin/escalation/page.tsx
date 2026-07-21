@@ -146,7 +146,7 @@ export default function AdminEscalationPage() {
   });
 
   const order = orderQuery.data;
-  const results = searchQuery.data ?? [];
+  const results = useMemo(() => searchQuery.data ?? [], [searchQuery.data]);
   const selectedSummary = useMemo(
     () => results.find((row) => row.id === selectedId) ?? null,
     [results, selectedId],

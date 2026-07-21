@@ -7,20 +7,20 @@ export type PaymentOverlayPhase = 'creating' | 'checkout' | 'verifying' | 'placi
 
 const COPY: Record<Exclude<PaymentOverlayPhase, null>, { title: string; subtitle: string }> = {
   creating: {
-    title: 'Preparing secure payment',
-    subtitle: 'Please wait a moment…',
+    title: 'Placing your order',
+    subtitle: 'Setting up secure payment…',
   },
   checkout: {
-    title: 'Opening payment',
-    subtitle: 'Complete payment in the secure window',
+    title: 'Complete payment',
+    subtitle: 'Use the Razorpay window to pay safely',
   },
   verifying: {
-    title: 'Confirming your payment',
-    subtitle: 'Do not refresh or go back',
+    title: 'Confirming payment',
+    subtitle: 'Please wait — do not close this page',
   },
   placing: {
     title: 'Placing your order',
-    subtitle: 'No payment needed — please wait a moment…',
+    subtitle: 'No payment needed — almost done',
   },
 };
 

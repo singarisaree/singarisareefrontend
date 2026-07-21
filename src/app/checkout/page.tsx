@@ -300,11 +300,14 @@ export default function CheckoutPage() {
     const draft = readCheckoutDraft();
     if (!draft) return null;
     const {
-      deliveryCoordinates: _coords,
-      preferredShipping: _pref,
-      instantDeliveryAvailable: _inst,
+      deliveryCoordinates,
+      preferredShipping,
+      instantDeliveryAvailable,
       ...formFields
     } = draft;
+    void deliveryCoordinates;
+    void preferredShipping;
+    void instantDeliveryAvailable;
     return formFields;
   }, []);
 
@@ -775,6 +778,7 @@ export default function CheckoutPage() {
     if (needsGateway) {
       void preloadRazorpayScript();
     }
+    let createdOrderNumber: string | null = null;
     try {
       const phone = buildCheckoutPhone(data.customerPhone, selectedCountry);
       const result = await orderService.checkout({
@@ -811,6 +815,7 @@ export default function CheckoutPage() {
       if (!orderNumber) {
         throw new Error('Order was not created');
       }
+      createdOrderNumber = orderNumber;
 
       if (result.paymentRequired === false) {
         setPaymentPhase('placing');
@@ -823,6 +828,9 @@ export default function CheckoutPage() {
       if (!result.razorpayOrderId || !result.keyId) {
         throw new Error('Payment session was not created');
       }
+
+      clearCheckoutDraft();
+      clearCart();
 
       setPaymentPhase('checkout');
       const payResult = await openRazorpayCheckout({
@@ -837,31 +845,23 @@ export default function CheckoutPage() {
         onVerifying: () => setPaymentPhase('verifying'),
       });
 
-      if (payResult.status === 'paid') {
-        setPaymentPhase('verifying');
-        clearCheckoutDraft();
-        clearCart();
-        router.replace(`/order/success?order_id=${encodeURIComponent(orderNumber)}`);
-        return;
-      }
-
-      setPaymentPhase(null);
-      setIsSubmitting(false);
+      setPaymentPhase('verifying');
+      router.replace(`/order/success?order_id=${encodeURIComponent(orderNumber)}`);
 
       if (payResult.status === 'failed') {
-        toast.error(payResult.reason || 'Payment was not completed. You can try again.');
-        router.replace(`/order/pending?order_id=${encodeURIComponent(orderNumber)}`);
         return;
       }
-
-      toast.info('Payment window closed. Your order is reserved — complete payment anytime.');
-      router.replace(`/order/pending?order_id=${encodeURIComponent(orderNumber)}`);
     } catch (error) {
+      if (createdOrderNumber) {
+        setPaymentPhase('verifying');
+        router.replace(`/order/success?order_id=${encodeURIComponent(createdOrderNumber)}`);
+        return;
+      }
       setPaymentPhase(null);
       const message =
         isAxiosError(error) && typeof error.response?.data?.message === 'string'
           ? error.response.data.message
-          : 'Checkout failed. Please try again.';
+          : 'Could not place your order. Please try again.';
       toast.error(message);
       setIsSubmitting(false);
     }

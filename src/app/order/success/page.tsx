@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { CheckCircle, Loader2, ShoppingBag } from 'lucide-react';
+import { CheckCircle, Clock, Loader2, ShoppingBag, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/layout/footer';
 import { useCartStore } from '@/stores/cart-store';
@@ -30,50 +30,45 @@ function formatEstimatedDeliveryMessage(order: OrderPaymentStatus): string {
       const arriveAt = looksLikeDateOnly
         ? new Date(Date.now() + 60 * 60 * 1000)
         : eta;
-      return `Estimated Delivery: Arrives by ${formatTime(arriveAt)} (Instant)`;
+      return `Estimated delivery: arrives by ${formatTime(arriveAt)} (Instant)`;
     }
-    return 'Estimated Delivery: Arrives today (Instant)';
+    return 'Estimated delivery: arrives today (Instant)';
   }
 
   if (type === 'INTERNATIONAL') {
     return hasEta
-      ? `Estimated Delivery: Expected by ${formatDate(eta)}`
-      : 'Estimated Delivery: Timeline confirmed after shipping calculation';
+      ? `Estimated delivery: expected by ${formatDate(eta)}`
+      : 'Estimated delivery: timeline confirmed after shipping';
   }
 
-  // Hyderabad Standard: always 2 days
   if (order.isHyderabadDelivery) {
-    return 'Estimated Delivery: Arrives in 2 days';
+    return 'Estimated delivery: arrives in 2 days';
   }
 
-  // Other India cities: 3–7 day window (not Instant / not Hyderabad)
-  return 'Estimated Delivery: Expected in 3–7 days';
+  return 'Estimated delivery: expected in 3–7 days';
+}
+
+function OrderSummaryCard({ orderData, orderId }: { orderData: OrderPaymentStatus; orderId: string }) {
+  return (
+    <div className="luxury-card mt-8 p-6 text-left">
+      <p className="text-sm text-brown-light">Order number</p>
+      <p className="text-base font-normal text-charcoal">
+        {formatShortOrderNumber(orderData.orderNumber || orderId)}
+      </p>
+    </div>
+  );
 }
 
 function SuccessContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('order_id');
   const clearCart = useCartStore((s) => s.clearCart);
 
   const { data: orderData, isLoading } = useQuery(orderPaymentReturnQueryOptions(orderId));
-  const isConfirmed = !!orderData && isOrderPaymentSuccess(orderData);
-  const pendingChecks = useRef(0);
 
-  useEffect(() => {
-    if (!orderData || !orderId) return;
-    if (isOrderPaymentFailed(orderData)) {
-      router.replace(`/order/failed?order_id=${orderId}`);
-      return;
-    }
-    if (isOrderPaymentPending(orderData)) {
-      pendingChecks.current += 1;
-      // Keep checking briefly, then move to pending page if still unresolved.
-      if (pendingChecks.current >= 20) {
-        router.replace(`/order/pending?order_id=${orderId}`);
-      }
-    }
-  }, [orderData, orderId, router]);
+  const isConfirmed = !!orderData && isOrderPaymentSuccess(orderData);
+  const isFailed = !!orderData && isOrderPaymentFailed(orderData);
+  const isPending = !!orderData && isOrderPaymentPending(orderData);
 
   useEffect(() => {
     if (orderData && isOrderPaymentSuccess(orderData)) {
@@ -86,77 +81,138 @@ function SuccessContent() {
       <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
         <p className="text-brown-light">Order not found.</p>
         <Link href="/" className="mt-4 inline-block">
-          <Button variant="outline">Return Home</Button>
+          <Button variant="outline">Return home</Button>
         </Link>
       </div>
     );
   }
 
-  // Don't show thank-you until payment is confirmed — avoids false success on failed payments.
-  if (isLoading || !orderData || !isConfirmed) {
+  if (isLoading || !orderData) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
         <Loader2 className="mx-auto h-10 w-10 animate-spin text-gold" />
-        <p className="mt-4 text-brown-light">Confirming your payment...</p>
-        <p className="mt-2 text-sm text-brown-light">
-          Order {formatShortOrderNumber(orderData?.orderNumber || orderId)}
-        </p>
+        <p className="mt-4 font-medium text-charcoal">Confirming your payment</p>
+        <p className="mt-2 text-sm text-brown-light">Please wait — do not refresh this page.</p>
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: 'spring', duration: 0.6 }}
-      >
-        <CheckCircle className="mx-auto h-16 w-16 text-gold" />
-      </motion.div>
+  if (isConfirmed) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', duration: 0.6 }}
+        >
+          <CheckCircle className="mx-auto h-16 w-16 text-gold" />
+        </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="mt-6"
-      >
-        <h1 className="font-serif text-3xl text-charcoal">Thank You!</h1>
-        <p className="mt-2 text-brown-light">Your order has been placed successfully</p>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-6"
+        >
+          <h1 className="font-serif text-3xl text-charcoal">Thank you!</h1>
+          <p className="mt-2 text-brown-light">Your order is confirmed.</p>
 
-        <div className="luxury-card mt-8 p-6 text-left">
-          <p className="text-sm text-brown-light">Order Number</p>
-          <p className="text-base font-normal text-charcoal">
-            {formatShortOrderNumber(orderData.orderNumber || orderId)}
-          </p>
-          <p className="mt-4 text-sm text-brown-light">
-            {formatEstimatedDeliveryMessage(orderData)}
-          </p>
-          <p className="mt-2 text-sm text-brown-light">
-            A confirmation WhatsApp message has been sent to you.
-          </p>
-        </div>
+          <div className="luxury-card mt-8 p-6 text-left">
+            <p className="text-sm text-brown-light">Order number</p>
+            <p className="text-base font-normal text-charcoal">
+              {formatShortOrderNumber(orderData.orderNumber || orderId)}
+            </p>
+            <p className="mt-4 text-sm text-brown-light">
+              {formatEstimatedDeliveryMessage(orderData)}
+            </p>
+            <p className="mt-2 text-sm text-brown-light">
+              A confirmation message will be sent on WhatsApp.
+            </p>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link href="/my-orders">
+              <Button variant="gold">View my orders</Button>
+            </Link>
+            <Link href="/collections">
+              <Button variant="outline">
+                <ShoppingBag className="h-4 w-4" />
+                Continue shopping
+              </Button>
+            </Link>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (isFailed) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
+        <XCircle className="mx-auto h-16 w-16 text-red-500" />
+        <h1 className="mt-6 font-serif text-3xl text-charcoal">Payment not completed</h1>
+        <p className="mt-2 text-brown-light">
+          No amount was charged. You can place a new order whenever you are ready.
+        </p>
+        <p className="mt-1 text-sm text-brown-light">
+          If any amount was debited, it will be refunded in 3–7 working days.
+        </p>
+
+        <OrderSummaryCard orderData={orderData} orderId={orderId} />
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Link href="/checkout">
+            <Button variant="gold">Place a new order</Button>
+          </Link>
           <Link href="/collections">
-            <Button variant="gold">
+            <Button variant="outline">
               <ShoppingBag className="h-4 w-4" />
-              Continue Shopping
+              Continue shopping
             </Button>
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (isPending) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
+        <Clock className="mx-auto h-16 w-16 text-amber-500" />
+        <h1 className="mt-6 font-serif text-3xl text-charcoal">Confirming your payment</h1>
+        <p className="mt-2 text-brown-light">
+          We are verifying your payment with the bank. This usually takes a few seconds.
+        </p>
+        <Loader2 className="mx-auto mt-6 h-8 w-8 animate-spin text-gold" />
+
+        <OrderSummaryCard orderData={orderData} orderId={orderId} />
+
+        <p className="mt-6 text-sm text-brown-light">
+          This page updates automatically. You can also check status in My Orders.
+        </p>
+        <div className="mt-6">
           <Link href="/my-orders">
-            <Button variant="outline">My Orders</Button>
+            <Button variant="outline">Go to my orders</Button>
           </Link>
         </div>
-      </motion.div>
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export default function OrderSuccessPage() {
   return (
     <>
-      <Suspense fallback={<div className="py-20 text-center">Loading...</div>}>
+      <Suspense
+        fallback={
+          <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
+            <Loader2 className="mx-auto h-10 w-10 animate-spin text-gold" />
+            <p className="mt-4 text-brown-light">Loading order…</p>
+          </div>
+        }
+      >
         <SuccessContent />
       </Suspense>
       <Footer />

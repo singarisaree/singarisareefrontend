@@ -66,6 +66,7 @@ export type OpenRazorpayCheckoutInput = {
 
 export type RazorpayPayResult =
   | { status: 'paid' }
+  | { status: 'verify_pending' }
   | { status: 'dismissed' }
   | { status: 'failed'; reason?: string };
 
@@ -126,7 +127,7 @@ export async function openRazorpayCheckout(
   const key = input.keyId?.trim() || '';
   if (!key) throw new Error('Razorpay key is not configured');
 
-  return new Promise<RazorpayPayResult>((resolve, reject) => {
+  return new Promise<RazorpayPayResult>((resolve) => {
     let settled = false;
 
     const finish = (result: RazorpayPayResult) => {
@@ -153,7 +154,6 @@ export async function openRazorpayCheckout(
       },
       theme: { color: '#C4A35A' },
       remember_customer: true,
-      retry: { enabled: true, max_count: 3 },
       modal: {
         animation: true,
         confirm_close: true,
@@ -174,9 +174,9 @@ export async function openRazorpayCheckout(
           });
           await input.onSuccess?.();
           finish({ status: 'paid' });
-        } catch (error) {
-          settled = true;
-          reject(error);
+        } catch {
+          // Payment may have succeeded — let the status page poll and confirm.
+          finish({ status: 'verify_pending' });
         }
       },
     });
