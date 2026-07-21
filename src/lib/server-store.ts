@@ -119,15 +119,15 @@ export const serverStore = {
       ['storefront-categories', 'storefront-products'],
     ),
   getSettings: () =>
-    cached('settings-public', 30, () => rawGet<PublicSettings>('/settings/public'), [
+    cached('settings-public', 15, () => rawGet<PublicSettings>('/settings/public'), [
       'storefront-settings',
     ]),
   getBanners: () =>
-    cached('hero-banners', 120, () => rawGet<HeroBanner[]>('/hero-banners'), ['storefront-banners']),
+    cached('hero-banners', 30, () => rawGet<HeroBanner[]>('/hero-banners'), ['storefront-banners']),
   getHomepage: () =>
     cached(
       'storefront-homepage',
-      120,
+      30,
       () =>
         rawGet<{
           banners: HeroBanner[];

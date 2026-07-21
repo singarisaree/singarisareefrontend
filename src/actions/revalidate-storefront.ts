@@ -9,6 +9,18 @@ function revalidateCorePaths() {
   revalidatePath('/search');
 }
 
+/** Called from realtime socket on open storefront tabs when admin changes catalog/content. */
+export async function refreshStorefrontCacheFromRealtime() {
+  revalidateTag('storefront-products');
+  revalidateTag('storefront-categories');
+  revalidateTag('storefront-settings');
+  revalidateTag('storefront-banners');
+  revalidateTag('storefront-homepage');
+  revalidateTag('storefront-collections');
+  revalidateTag('storefront-reviews');
+  revalidateCorePaths();
+}
+
 /** Bust storefront caches after admin product changes */
 export async function revalidateStorefrontProduct(slug?: string) {
   revalidateTag('storefront-products');
