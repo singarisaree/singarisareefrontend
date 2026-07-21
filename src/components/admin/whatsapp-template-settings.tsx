@@ -628,9 +628,20 @@ export function WhatsAppTemplateSettings() {
                           {previewBody}
                         </p>
                         {template.footer ? (
-                          <p className="mt-2 text-xs text-[#6b7280]">
-                            {template.footer}
-                          </p>
+                          /^https?:\/\//.test(template.footer) ? (
+                            <a
+                              href={template.footer}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 block text-xs font-medium text-blue-600 underline"
+                            >
+                              {template.footer}
+                            </a>
+                          ) : (
+                            <p className="mt-2 text-xs text-[#6b7280]">
+                              {template.footer}
+                            </p>
+                          )
                         ) : null}
                       </div>
                     </div>

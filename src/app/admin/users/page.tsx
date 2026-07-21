@@ -573,6 +573,14 @@ export default function AdminUsersPage() {
                     {campaignLink}
                   </a>
                 )}
+                <a
+                  href="https://www.singarisaree.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-2 block text-sm font-medium text-blue-600 underline"
+                >
+                  https://www.singarisaree.com
+                </a>
               </div>
 
               <div className="space-y-3 border-t border-[#e2e8f0] pt-4">
