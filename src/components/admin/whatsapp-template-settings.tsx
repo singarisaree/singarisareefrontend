@@ -81,6 +81,26 @@ function validateTemplate(template: WhatsAppTemplateRecord): string | null {
   if (template.examples.some((example) => !example.trim())) {
     return "Every variable needs a sample value for Meta review";
   }
+  const trimmedBody = template.body.trim();
+  if (/^\{\{\d+\}\}/.test(trimmedBody)) {
+    return "Body cannot start with a variable. Add text before {{1}}.";
+  }
+  if (/\{\{\d+\}\}$/.test(trimmedBody)) {
+    return "Body cannot end with a variable. Add text after the last variable.";
+  }
+  if (/(?:^|\n)\s*\{\{\d+\}\}\s*(?:\n|$)/.test(template.body)) {
+    return "A variable cannot be alone on a line. Wrap every variable with surrounding text.";
+  }
+  const staticText = template.body
+    .replace(/\{\{\d+\}\}/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (placeholders.length >= 3 && staticText.length < placeholders.length * 18) {
+    return "Too many variables for this message length. Add more fixed text around the variables.";
+  }
+  if (placeholders.length >= 5 && staticText.length < 120) {
+    return "This template needs more fixed text for Meta approval.";
+  }
   if (template.kind === "marketing_image" && !template.headerHandle) {
     return "Upload a sample image before submitting the image template";
   }
@@ -559,6 +579,11 @@ export function WhatsAppTemplateSettings() {
                       }
                       className="w-full rounded-lg border border-[#e2e8f0] p-3 font-normal leading-relaxed focus:border-[#0f172a] focus:outline-none disabled:bg-[#f8fafc]"
                     />
+                    <span className="block text-xs font-normal text-[#64748b]">
+                      Meta rules: do not start or end with a variable, do not leave a
+                      variable alone on a line, and keep enough fixed text around
+                      each variable.
+                    </span>
                   </label>
 
                   <div className="space-y-3">
