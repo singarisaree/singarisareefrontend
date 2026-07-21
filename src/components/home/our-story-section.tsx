@@ -1,9 +1,10 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { resolveStorefrontImageUrl, shouldUnoptimizeStorefrontImage } from '@/lib/image';
 
 export function OurStorySection({ imageUrl }: { imageUrl?: string }) {
-  const src = imageUrl?.trim() || '';
+  const src = resolveStorefrontImageUrl(imageUrl);
 
   return (
     <section className="relative overflow-hidden bg-cream py-16 pattern-mandala sm:py-20" aria-labelledby="our-story">
@@ -16,6 +17,7 @@ export function OurStorySection({ imageUrl }: { imageUrl?: string }) {
               fill
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover"
+              unoptimized={shouldUnoptimizeStorefrontImage(src)}
             />
           ) : null}
         </div>

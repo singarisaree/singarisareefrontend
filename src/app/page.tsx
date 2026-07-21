@@ -11,6 +11,7 @@ import { ProductRoutesPrefetch } from '@/components/storefront/product-routes-pr
 import { StoreSettingsSync } from '@/components/store-settings-provider';
 import { StoreFooter } from '@/components/layout/store-footer';
 import { getCachedHomepage } from '@/lib/store-home';
+import { serverStore } from '@/lib/server-store';
 import type { Metadata } from 'next';
 import type { PublicSettings, HeroBanner, Category, Product } from '@/types';
 
@@ -21,13 +22,24 @@ export const metadata: Metadata = {
 
 export const revalidate = 15;
 
+async function loadHomepageData() {
+  try {
+    return await getCachedHomepage();
+  } catch {
+    const [banners, categories, settings, products] = await Promise.all([
+      serverStore.getBanners().catch(() => [] as HeroBanner[]),
+      serverStore.getCategories().catch(() => [] as Category[]),
+      serverStore.getSettings().catch(() => ({} as PublicSettings)),
+      serverStore
+        .getProducts({ limit: '10', sortBy: 'createdAt', sortOrder: 'desc' })
+        .catch(() => [] as Product[]),
+    ]);
+    return { banners, categories, products, settings };
+  }
+}
+
 export default async function HomePage() {
-  const { banners, categories, products, settings } = await getCachedHomepage().catch(() => ({
-    banners: [] as HeroBanner[],
-    categories: [] as Category[],
-    products: [] as Product[],
-    settings: {} as PublicSettings,
-  }));
+  const { banners, categories, products, settings } = await loadHomepageData();
 
   return (
     <>

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight, Sparkles, Gem, Crown, Heart } from 'lucide-react';
 import type { HeroBanner } from '@/types';
+import { resolveStorefrontImageUrl, shouldUnoptimizeStorefrontImage } from '@/lib/image';
 
 interface HeroSectionProps {
   banners: HeroBanner[];
@@ -69,8 +70,8 @@ export function HeroSection({ banners }: HeroSectionProps) {
       }}
     >
       {slides.map((slide, index) => {
-        const desktopImage = slide.imageUrl;
-        const mobileImage = slide.mobileImageUrl || desktopImage;
+        const desktopImage = resolveStorefrontImageUrl(slide.imageUrl);
+        const mobileImage = resolveStorefrontImageUrl(slide.mobileImageUrl || slide.imageUrl);
         const visible = index === activeIndex;
         return (
           <div
@@ -90,7 +91,7 @@ export function HeroSection({ banners }: HeroSectionProps) {
                   loading={index === 0 ? undefined : 'lazy'}
                   sizes="100vw"
                   className="object-cover object-top"
-                  unoptimized={mobileImage.startsWith('http')}
+                  unoptimized={shouldUnoptimizeStorefrontImage(mobileImage)}
                 />
                 <div className="absolute inset-0 bg-cream/10" />
               </div>
@@ -105,7 +106,7 @@ export function HeroSection({ banners }: HeroSectionProps) {
                   loading={index === 0 ? undefined : 'lazy'}
                   sizes="100vw"
                   className="object-cover object-right-top"
-                  unoptimized={desktopImage.startsWith('http')}
+                  unoptimized={shouldUnoptimizeStorefrontImage(desktopImage)}
                 />
                 <div className="absolute inset-0 bg-cream/10" />
               </div>
