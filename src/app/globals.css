@@ -25,21 +25,34 @@
 
 html {
   scroll-behavior: smooth;
-  font-size: 100%;
+  /* Keep site type size stable — don't follow device/browser font scaling */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   background-color: var(--color-cream);
   color: var(--color-charcoal);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  /* Brand fonts only — avoid system-ui (looks different per device) */
+  font-family: var(--font-poppins), Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif), Georgia, serif;
+  font-family: var(--font-playfair), Georgia, serif;
   font-weight: 500;
   letter-spacing: 0.04em;
+}
+
+/* Forms/buttons often fall back to the device UI font unless forced */
+button,
+input,
+textarea,
+select,
+optgroup {
+  font-family: inherit;
+  font-size: inherit;
 }
 
 ::selection {

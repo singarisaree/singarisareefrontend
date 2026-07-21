@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Playfair_Display, Poppins } from 'next/font/google';
 import { cache } from 'react';
 import { Providers } from '@/components/providers';
@@ -15,6 +15,8 @@ const playfair = Playfair_Display({
   weight: ['400', '600'],
   variable: '--font-playfair',
   display: 'swap',
+  adjustFontFallback: true,
+  fallback: ['Georgia', 'serif'],
 });
 
 const poppins = Poppins({
@@ -22,7 +24,14 @@ const poppins = Poppins({
   weight: ['400', '500', '600'],
   variable: '--font-poppins',
   display: 'swap',
+  adjustFontFallback: true,
+  fallback: ['Arial', 'Helvetica', 'sans-serif'],
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
 
 const getLayoutSettings = cache(async (): Promise<PublicSettings> => {
   try {
@@ -63,7 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const orgLd = organizationJsonLd();
 
   return (
-    <html lang="en" className={`${playfair.variable} ${poppins.variable}`}>
+    <html lang="en" className={`${playfair.variable} ${poppins.variable} ${poppins.className}`}>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ffffff" />
@@ -74,7 +83,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }}
         />
       </head>
-      <body className="min-h-screen bg-cream antialiased">
+      <body className="min-h-screen bg-cream font-sans antialiased">
         <StoreSettingsProvider settings={settings}>
           <Providers>
             <StorefrontChrome>{children}</StorefrontChrome>

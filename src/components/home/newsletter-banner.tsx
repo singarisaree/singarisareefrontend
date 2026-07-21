@@ -63,7 +63,7 @@ export function NewsletterBanner() {
         </div>
 
         {joined ? (
-          <div className="flex items-center gap-2 rounded-sm bg-white/10 px-5 py-3 text-center text-white sm:px-6">
+          <div className="flex items-center gap-2 rounded-md bg-white/10 px-5 py-3 text-center text-white sm:px-6">
             <CheckCircle2 className="h-5 w-5 shrink-0 text-gold" strokeWidth={1.5} />
             <p className="text-sm font-medium sm:text-base">
               Thank you for joining as a VIP member
@@ -73,7 +73,7 @@ export function NewsletterBanner() {
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="h-10 shrink-0 bg-gold px-6 text-[0.65rem] font-bold tracking-[0.1em] text-charcoal transition-colors hover:bg-gold-dark sm:h-11 sm:px-8 sm:text-xs sm:tracking-[0.15em]"
+            className="h-10 shrink-0 rounded-md bg-gold px-6 text-[0.65rem] font-bold tracking-[0.1em] text-charcoal transition-colors hover:bg-gold-dark sm:h-11 sm:px-8 sm:text-xs sm:tracking-[0.15em]"
           >
             <span className="sm:hidden">JOIN</span>
             <span className="hidden sm:inline">JOIN NOW</span>
@@ -109,7 +109,7 @@ export function NewsletterBanner() {
             <button
               type="submit"
               disabled={submitting}
-              className="h-10 shrink-0 bg-gold px-4 text-[0.65rem] font-bold tracking-[0.1em] text-charcoal transition-colors hover:bg-gold-dark disabled:opacity-60 sm:h-11 sm:px-6 sm:text-xs sm:tracking-[0.15em]"
+              className="h-10 shrink-0 rounded-md bg-gold px-4 text-[0.65rem] font-bold tracking-[0.1em] text-charcoal transition-colors hover:bg-gold-dark disabled:opacity-60 sm:h-11 sm:px-6 sm:text-xs sm:tracking-[0.15em]"
             >
               <span className="sm:hidden">{submitting ? '...' : 'SUBMIT'}</span>
               <span className="hidden sm:inline">{submitting ? 'JOINING...' : 'SUBMIT'}</span>
