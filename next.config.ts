@@ -19,7 +19,6 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 3600,
     remotePatterns: [
-      { protocol: 'https', hostname: 'images.unsplash.com' },
       // Absolute /uploads URLs from the production API
       { protocol: 'https', hostname: 'api.singarisaree.com' },
       { protocol: 'http', hostname: 'localhost', port: '5001' },

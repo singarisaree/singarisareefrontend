@@ -40,12 +40,24 @@ export function NavbarSearch({ onNavigate, className }: NavbarSearchProps) {
   }, [mobileOpen]);
 
   useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
     const onPointerDown = (event: MouseEvent | TouchEvent) => {
       const target = event.target as Node;
       if (rootRef.current && !rootRef.current.contains(target)) {
         setPanelOpen(false);
         setActiveIndex(-1);
-        setMobileOpen(false);
+        // Keep mobile sheet open unless backdrop/close is used
+        if (!mobileOpen) {
+          setMobileOpen(false);
+        }
       }
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -64,7 +76,7 @@ export function NavbarSearch({ onNavigate, className }: NavbarSearchProps) {
       document.removeEventListener('touchstart', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, []);
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (trimmed.length < MIN_QUERY) {
@@ -145,13 +157,11 @@ export function NavbarSearch({ onNavigate, className }: NavbarSearchProps) {
     }
   };
 
-  const renderSuggestions = (visible: boolean) =>
-    visible && showPanel ? (
-      <div
-        className="absolute right-0 top-[calc(100%+0.4rem)] z-50 w-[min(92vw,22rem)] overflow-hidden rounded-xl border border-maroon/15 bg-cream shadow-lg sm:w-80"
-        role="listbox"
-        aria-label="Search suggestions"
-      >
+  const renderSuggestionList = () => {
+    if (!showPanel) return null;
+
+    return (
+      <div role="listbox" aria-label="Search suggestions">
         {loading && results.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-brown-light">Searching…</p>
         ) : results.length === 0 ? (
@@ -160,7 +170,7 @@ export function NavbarSearch({ onNavigate, className }: NavbarSearchProps) {
             <p className="mt-1 text-xs text-brown-light">Try another name or SKU</p>
           </div>
         ) : (
-          <ul className="max-h-80 overflow-y-auto py-1">
+          <ul className="max-h-[min(60vh,22rem)] overflow-y-auto py-1">
             {results.map((product, index) => {
               const active = index === activeIndex;
               return (
@@ -215,7 +225,8 @@ export function NavbarSearch({ onNavigate, className }: NavbarSearchProps) {
           View all results
         </Link>
       </div>
-    ) : null;
+    );
+  };
 
   return (
     <div ref={rootRef} className={cn('relative', className)}>
@@ -258,7 +269,11 @@ export function NavbarSearch({ onNavigate, className }: NavbarSearchProps) {
             </button>
           ) : null}
         </div>
-        {renderSuggestions(!mobileOpen)}
+        {showPanel && !mobileOpen ? (
+          <div className="absolute right-0 top-[calc(100%+0.4rem)] z-50 w-[min(92vw,22rem)] overflow-hidden rounded-xl border border-maroon/15 bg-cream shadow-lg sm:w-80">
+            {renderSuggestionList()}
+          </div>
+        ) : null}
       </form>
 
       {/* Mobile search trigger */}
@@ -275,46 +290,68 @@ export function NavbarSearch({ onNavigate, className }: NavbarSearchProps) {
         <Search className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={1.5} />
       </button>
 
-      {/* Mobile expanded panel */}
-      {mobileOpen && (
-        <div className="absolute right-0 top-1/2 z-50 w-[min(92vw,20rem)] -translate-y-1/2 lg:hidden">
-          <form onSubmit={handleSubmit} className="relative" role="search">
-            <div className="flex items-center gap-2 rounded-full border border-maroon/35 bg-cream px-3 py-1.5 shadow-md ring-2 ring-maroon/10">
-              <Search className="h-4 w-4 shrink-0 text-maroon/70" strokeWidth={1.75} aria-hidden />
-              <input
-                ref={mobileInputRef}
-                type="text"
-                inputMode="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onFocus={() => setPanelOpen(true)}
-                onKeyDown={handleKeyDown}
-                placeholder="Search name or SKU"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                enterKeyHint="search"
-                className="min-w-0 flex-1 bg-transparent text-sm text-charcoal outline-none placeholder:text-brown-light"
-              />
-              {loading && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-maroon/60" />}
-              <button
-                type="button"
-                className="shrink-0 text-brown-light hover:text-charcoal"
-                aria-label={query ? 'Clear and close search' : 'Close search'}
-                onClick={() => {
-                  setMobileOpen(false);
-                  setPanelOpen(false);
-                  setQuery('');
-                  setResults([]);
-                }}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            {renderSuggestions(true)}
-          </form>
+      {/* Mobile search sheet — same dropdown style as desktop */}
+      {mobileOpen ? (
+        <div className="fixed inset-0 z-[80] lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-charcoal/40"
+            aria-label="Close search"
+            onClick={closeAll}
+          />
+          <div className="absolute inset-x-0 top-0 border-b border-maroon/10 bg-cream shadow-lg">
+            <form onSubmit={handleSubmit} className="px-4 py-3" role="search">
+              <div className="flex items-center gap-2 rounded-full border border-maroon/20 bg-cream px-3 py-2 focus-within:border-maroon/45 focus-within:ring-2 focus-within:ring-maroon/10">
+                <Search className="h-4 w-4 shrink-0 text-maroon/70" strokeWidth={1.75} aria-hidden />
+                <input
+                  ref={mobileInputRef}
+                  type="text"
+                  inputMode="search"
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setPanelOpen(true);
+                  }}
+                  onFocus={() => setPanelOpen(true)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Search name or SKU"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  enterKeyHint="search"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-charcoal outline-none placeholder:text-brown-light"
+                />
+                {loading && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-maroon/60" />}
+                <button
+                  type="button"
+                  className="shrink-0 text-brown-light hover:text-charcoal"
+                  aria-label={query ? 'Clear search' : 'Close search'}
+                  onClick={() => {
+                    if (query) {
+                      setQuery('');
+                      setResults([]);
+                      setActiveIndex(-1);
+                      mobileInputRef.current?.focus();
+                      return;
+                    }
+                    closeAll();
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
+
+            {showPanel ? (
+              <div className="border-t border-maroon/10 bg-cream">{renderSuggestionList()}</div>
+            ) : (
+              <p className="border-t border-maroon/10 px-4 py-4 text-center text-xs text-brown-light">
+                Type a product name or SKU to search
+              </p>
+            )}
+          </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
