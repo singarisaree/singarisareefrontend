@@ -970,7 +970,7 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <>
-        <div className="mx-auto flex min-h-[50vh] max-w-7xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
+        <div className="mx-auto flex min-h-[50vh] max-w-7xl flex-col items-center justify-center px-5 py-16 text-center sm:px-6 lg:px-8">
           <ShoppingBag className="h-16 w-16 text-gold/40" strokeWidth={1.25} aria-hidden />
           <h1 className="mt-6 font-serif text-3xl text-charcoal">Your cart is empty</h1>
           <p className="mt-2 max-w-md text-brown-light">
@@ -989,7 +989,7 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl overflow-x-hidden px-5 py-8 sm:px-6 lg:px-8">
         <h1 className="font-serif text-3xl text-charcoal">Checkout</h1>
         <button
           type="button"
@@ -1004,11 +1004,14 @@ export default function CheckoutPage() {
           onSubmit={handleSubmit(onSubmit, handleCheckoutValidationError)}
           className="mt-8 grid gap-8 lg:grid-cols-2"
         >
-              <section className="luxury-card h-fit p-6 lg:sticky lg:top-24">
+              <section className="luxury-card h-fit p-4 sm:p-6 lg:sticky lg:top-24">
                 <h2 className="font-serif text-lg">Products</h2>
                 <div className="mt-4 space-y-4">
                   {items.map((item) => (
-                    <article key={item.productColorId} className="flex gap-4 border-b border-gold/10 pb-4 last:border-0 last:pb-0">
+                    <article
+                      key={item.productColorId}
+                      className="flex min-w-0 gap-3 border-b border-gold/10 pb-4 last:border-0 last:pb-0 sm:gap-4"
+                    >
                       <Link href={`/product/${item.slug}`} className="relative h-24 w-20 shrink-0 overflow-hidden rounded bg-beige">
                         {item.imageUrl ? (
                           <Image
@@ -1021,8 +1024,11 @@ export default function CheckoutPage() {
                         ) : null}
                       </Link>
                       <div className="flex min-w-0 flex-1 flex-col justify-between">
-                        <div>
-                          <Link href={`/product/${item.slug}`} className="font-serif text-charcoal hover:text-gold">
+                        <div className="min-w-0">
+                          <Link
+                            href={`/product/${item.slug}`}
+                            className="break-words font-serif text-charcoal hover:text-gold"
+                          >
                             {item.productName}
                           </Link>
                           <p className="text-sm text-brown-light">
@@ -1030,8 +1036,8 @@ export default function CheckoutPage() {
                           </p>
                           <p className="mt-1 text-sm font-medium">{formatPrice(item.price)}</p>
                         </div>
-                        <div className="mt-3 flex items-center justify-between">
-                          <div className="flex items-center rounded-md border border-gold/30">
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                          <div className="flex shrink-0 items-center rounded-md border border-gold/30">
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.productColorId, item.quantity - 1)}
@@ -1050,8 +1056,10 @@ export default function CheckoutPage() {
                               <Plus className="h-3 w-3" />
                             </button>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium">{formatPrice(item.price * item.quantity)}</span>
+                          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
+                            <span className="whitespace-nowrap text-sm font-medium">
+                              {formatPrice(item.price * item.quantity)}
+                            </span>
                             <button
                               type="button"
                               onClick={() => removeItem(item.productColorId)}
@@ -1069,7 +1077,7 @@ export default function CheckoutPage() {
               </section>
 
               <div className="space-y-6">
-                <section className="luxury-card p-6">
+                <section className="luxury-card p-4 sm:p-6">
                   <h2 className="font-serif text-lg">Contact Information</h2>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
@@ -1111,7 +1119,7 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                <section className="luxury-card p-6">
+                <section className="luxury-card p-4 sm:p-6">
                   <h2 className="font-serif text-lg">Shipping Address</h2>
 
                   <div className="mt-4 rounded-lg border border-gold/25 bg-gold/5 p-4">
@@ -1375,7 +1383,7 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                <section className="luxury-card p-6">
+                <section className="luxury-card p-4 sm:p-6">
                   <h2 className="font-serif text-lg">Order Summary</h2>
                   <div className="mt-4 flex gap-2">
                     <Input
