@@ -10,7 +10,7 @@ export function StorefrontChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       {!isAdmin && <Navbar />}
-      <main>{children}</main>
+      <main className="min-w-0 overflow-x-hidden">{children}</main>
     </>
   );
 }

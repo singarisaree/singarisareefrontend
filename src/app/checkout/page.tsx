@@ -970,7 +970,7 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <>
-        <div className="mx-auto flex min-h-[50vh] max-w-7xl flex-col items-center justify-center px-5 py-16 text-center sm:px-6 lg:px-8">
+        <div className="mx-auto box-border flex min-h-[50vh] w-full max-w-7xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
           <ShoppingBag className="h-16 w-16 text-gold/40" strokeWidth={1.25} aria-hidden />
           <h1 className="mt-6 font-serif text-3xl text-charcoal">Your cart is empty</h1>
           <p className="mt-2 max-w-md text-brown-light">
@@ -989,7 +989,7 @@ export default function CheckoutPage() {
 
   return (
     <>
-      <div className="mx-auto max-w-7xl overflow-x-hidden px-5 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto box-border w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <h1 className="font-serif text-3xl text-charcoal">Checkout</h1>
         <button
           type="button"
@@ -1002,9 +1002,9 @@ export default function CheckoutPage() {
 
         <form
           onSubmit={handleSubmit(onSubmit, handleCheckoutValidationError)}
-          className="mt-8 grid gap-8 lg:grid-cols-2"
+          className="mt-8 grid w-full min-w-0 max-w-full gap-6 sm:gap-8 lg:grid-cols-2"
         >
-              <section className="luxury-card h-fit p-4 sm:p-6 lg:sticky lg:top-24">
+              <section className="luxury-card h-fit w-full min-w-0 max-w-full p-4 sm:p-6 lg:sticky lg:top-24">
                 <h2 className="font-serif text-lg">Products</h2>
                 <div className="mt-4 space-y-4">
                   {items.map((item) => (
@@ -1076,8 +1076,8 @@ export default function CheckoutPage() {
                 </div>
               </section>
 
-              <div className="space-y-6">
-                <section className="luxury-card p-4 sm:p-6">
+              <div className="min-w-0 w-full max-w-full space-y-6">
+                <section className="luxury-card w-full min-w-0 max-w-full p-4 sm:p-6">
                   <h2 className="font-serif text-lg">Contact Information</h2>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
@@ -1119,7 +1119,7 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                <section className="luxury-card p-4 sm:p-6">
+                <section className="luxury-card w-full min-w-0 max-w-full p-4 sm:p-6">
                   <h2 className="font-serif text-lg">Shipping Address</h2>
 
                   <div className="mt-4 rounded-lg border border-gold/25 bg-gold/5 p-4">
@@ -1383,18 +1383,20 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                <section className="luxury-card p-4 sm:p-6">
+                <section className="luxury-card w-full min-w-0 max-w-full p-4 sm:p-6">
                   <h2 className="font-serif text-lg">Order Summary</h2>
-                  <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex min-w-0 gap-2">
                     <Input
                       placeholder="Coupon code"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
                       aria-label="Coupon code"
+                      className="min-w-0 flex-1"
                     />
                     <Button
                       variant="outline"
                       type="button"
+                      className="shrink-0"
                       onClick={() => void handleApplyCoupon()}
                       disabled={isApplyingCoupon}
                     >
@@ -1420,21 +1422,21 @@ export default function CheckoutPage() {
                     </div>
                   )}
                   <dl className="mt-4 space-y-2 text-sm">
-                    <div className="flex justify-between"><dt>Subtotal</dt><dd>{formatPrice(subtotal)}</dd></div>
+                    <div className="flex min-w-0 justify-between gap-3"><dt>Subtotal</dt><dd className="shrink-0">{formatPrice(subtotal)}</dd></div>
                     {couponDiscount > 0 && (
-                      <div className="flex justify-between text-gold">
-                        <dt>
+                      <div className="flex min-w-0 justify-between gap-3 text-gold">
+                        <dt className="min-w-0">
                           {formatCouponDiscountLabel({
                             couponCode,
                             isRefundCoupon,
                           })}
                         </dt>
-                        <dd>-{formatPrice(couponDiscount)}</dd>
+                        <dd className="shrink-0">-{formatPrice(couponDiscount)}</dd>
                       </div>
                     )}
-                    <div className="flex justify-between">
+                    <div className="flex min-w-0 justify-between gap-3">
                       <dt>{quickQuote ? 'Delivery fee' : 'Shipping'}</dt>
-                      <dd>
+                      <dd className="shrink-0">
                         {shippingStatus === 'loading'
                           ? '…'
                           : shippingStatus === 'ready'
@@ -1444,8 +1446,8 @@ export default function CheckoutPage() {
                             : '—'}
                       </dd>
                     </div>
-                    <div className="flex justify-between border-t border-gold/20 pt-2 text-base font-medium">
-                      <dt>Grand Total</dt><dd>{formatPrice(grandTotal)}</dd>
+                    <div className="flex min-w-0 justify-between gap-3 border-t border-gold/20 pt-2 text-base font-medium">
+                      <dt>Grand Total</dt><dd className="shrink-0">{formatPrice(grandTotal)}</dd>
                     </div>
                   </dl>
                   {(shippingStatus === 'unavailable' || shippingStatus === 'error') && (

@@ -141,7 +141,7 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full">
+    <header className="sticky top-0 z-50 w-full max-w-full overflow-x-hidden">
       {/* Announcement bar — single line; horizontally scrollable when text exceeds width */}
       {showAnnouncement && (
         <div className="announcement-scroll bg-charcoal-dark text-xs tracking-wide text-white sm:text-sm">
