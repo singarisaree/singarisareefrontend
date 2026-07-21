@@ -2,8 +2,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
+/** Fallback only when Admin → Settings → Our Story has no uploaded image. */
 const DEFAULT_OUR_STORY_IMAGE =
-  'https://images.unsplash.com/photo-1610030150117-d876b9d027b0?w=800&q=80';
+  'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=800&q=80';
 
 export function OurStorySection({ imageUrl }: { imageUrl?: string }) {
   const src = imageUrl || DEFAULT_OUR_STORY_IMAGE;

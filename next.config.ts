@@ -20,9 +20,12 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 3600,
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      // Absolute /uploads URLs from the production API
+      { protocol: 'https', hostname: 'api.singarisaree.com' },
+      { protocol: 'http', hostname: 'localhost', port: '5001' },
+      { protocol: 'http', hostname: '127.0.0.1', port: '5001' },
       // Legacy images uploaded before the switch to local storage still live on Cloudinary.
       { protocol: 'https', hostname: 'res.cloudinary.com' },
-      { protocol: 'https', hostname: '*.cloudinary.com' },
     ],
   },
   // Proxy locally stored images from the backend so relative "/uploads/*" paths
