@@ -421,6 +421,7 @@ export type WhatsAppTemplateKind =
   | "return_completed"
   | "refund_coupon_issued"
   | "customer_welcome"
+  | "customer_login_otp"
   | "marketing_text"
   | "marketing_image";
 
@@ -438,7 +439,7 @@ export interface WhatsAppTemplateRecord {
   kind: WhatsAppTemplateKind;
   name: string;
   language: string;
-  category: "UTILITY" | "MARKETING";
+  category: "UTILITY" | "MARKETING" | "AUTHENTICATION";
   headerText: string;
   body: string;
   footer: string;

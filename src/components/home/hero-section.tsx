@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight, ChevronLeft, ChevronRight, Sparkles, Gem, Crown, Heart } from 'lucide-react';
 import type { HeroBanner } from '@/types';
-import { resolveStorefrontImageUrl, shouldUnoptimizeStorefrontImage } from '@/lib/image';
+import { resolveHeroImageUrl, shouldUnoptimizeStorefrontImage } from '@/lib/image';
 
 interface HeroSectionProps {
   banners: HeroBanner[];
@@ -70,9 +70,10 @@ export function HeroSection({ banners }: HeroSectionProps) {
       }}
     >
       {slides.map((slide, index) => {
-        const desktopImage = resolveStorefrontImageUrl(slide.imageUrl);
-        const mobileImage = resolveStorefrontImageUrl(slide.mobileImageUrl || slide.imageUrl);
+        const desktopImage = resolveHeroImageUrl(slide.imageUrl);
+        const mobileImage = resolveHeroImageUrl(slide.mobileImageUrl || slide.imageUrl);
         const visible = index === activeIndex;
+        const isFirst = index === 0;
         return (
           <div
             key={slide.id}
@@ -87,8 +88,9 @@ export function HeroSection({ banners }: HeroSectionProps) {
                   src={mobileImage}
                   alt={slide.title || 'Singari Sarees'}
                   fill
-                  priority={index === 0}
-                  loading={index === 0 ? undefined : 'lazy'}
+                  priority={isFirst}
+                  fetchPriority={isFirst ? 'high' : 'auto'}
+                  loading={isFirst ? 'eager' : 'lazy'}
                   sizes="100vw"
                   className="object-cover object-top"
                   unoptimized={shouldUnoptimizeStorefrontImage(mobileImage)}
@@ -102,8 +104,9 @@ export function HeroSection({ banners }: HeroSectionProps) {
                   src={desktopImage}
                   alt={slide.title || 'Singari Sarees'}
                   fill
-                  priority={index === 0}
-                  loading={index === 0 ? undefined : 'lazy'}
+                  priority={isFirst}
+                  fetchPriority={isFirst ? 'high' : 'auto'}
+                  loading={isFirst ? 'eager' : 'lazy'}
                   sizes="100vw"
                   className="object-cover object-right-top"
                   unoptimized={shouldUnoptimizeStorefrontImage(desktopImage)}

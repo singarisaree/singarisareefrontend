@@ -33,6 +33,7 @@ const TITLES: Record<WhatsAppTemplateKind, string> = {
   return_completed: "Return completed",
   refund_coupon_issued: "Return coupon issued",
   customer_welcome: "First-login welcome",
+  customer_login_otp: "Login OTP (Meta)",
   marketing_text: "Text marketing",
   marketing_image: "Image marketing",
 };
@@ -50,11 +51,48 @@ const STATUS_STYLES: Record<WhatsAppTemplateRecord["status"], string> = {
 
 function errorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && "response" in error) {
-    const response = (error as { response?: { data?: { message?: string } } })
-      .response;
-    if (response?.data?.message) return response.data.message;
+    const response = (
+      error as {
+        response?: {
+          data?: {
+            message?: string;
+            errors?: Array<{ field?: string; message?: string }>;
+          };
+        };
+      }
+    ).response?.data;
+    if (response?.errors?.length) {
+      const details = response.errors
+        .map((item) => item.message)
+        .filter(Boolean)
+        .join("; ");
+      if (details) return details;
+    }
+    if (response?.message) return response.message;
   }
   return error instanceof Error ? error.message : fallback;
+}
+
+/** Drop browser-only blob previews before saving to the API. */
+function draftPayload(template: WhatsAppTemplateRecord) {
+  const preview = template.headerPreviewUrl?.trim() || "";
+  const headerPreviewUrl =
+    preview &&
+    !preview.startsWith("blob:") &&
+    (/^https?:\/\//i.test(preview) || preview.startsWith("/uploads/"))
+      ? preview
+      : undefined;
+
+  return {
+    name: template.name,
+    language: template.language,
+    headerText: template.headerText,
+    body: template.body,
+    footer: template.footer,
+    examples: template.examples,
+    ...(template.headerHandle ? { headerHandle: template.headerHandle } : {}),
+    ...(headerPreviewUrl ? { headerPreviewUrl } : {}),
+  };
 }
 
 function renderPreview(text: string, examples: string[]): string {
@@ -158,7 +196,10 @@ export function WhatsAppTemplateSettings() {
 
   const saveDraft = useMutation({
     mutationFn: (template: WhatsAppTemplateRecord) =>
-      adminSettingsService.saveWhatsAppTemplate(template.kind, template),
+      adminSettingsService.saveWhatsAppTemplate(
+        template.kind,
+        draftPayload(template),
+      ),
     onSuccess: (template) => {
       replaceTemplate(template);
       toast.success("Template draft saved");
@@ -171,7 +212,10 @@ export function WhatsAppTemplateSettings() {
     mutationFn: async (template: WhatsAppTemplateRecord) => {
       const validation = validateTemplate(template);
       if (validation) throw new Error(validation);
-      await adminSettingsService.saveWhatsAppTemplate(template.kind, template);
+      await adminSettingsService.saveWhatsAppTemplate(
+        template.kind,
+        draftPayload(template),
+      );
       return adminSettingsService.submitWhatsAppTemplate(template.kind);
     },
     onSuccess: (template) => {
@@ -218,7 +262,10 @@ export function WhatsAppTemplateSettings() {
       template: WhatsAppTemplateRecord;
       file: File;
     }) => {
-      await adminSettingsService.saveWhatsAppTemplate(template.kind, template);
+      await adminSettingsService.saveWhatsAppTemplate(
+        template.kind,
+        draftPayload(template),
+      );
       return adminSettingsService.uploadWhatsAppTemplateImage(
         template.kind,
         file,
@@ -471,6 +518,15 @@ export function WhatsAppTemplateSettings() {
                   {template.rejectionReason ? (
                     <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                       Meta rejection: {template.rejectionReason}
+                    </div>
+                  ) : null}
+
+                  {template.kind === "customer_login_otp" ? (
+                    <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+                      Customer login OTP is sent on Meta WhatsApp and SMS with
+                      the same code — the customer can enter either message.
+                      Submit this AUTHENTICATION template to Meta, wait for
+                      APPROVED, then Activate. Sent.dm SMS is sent in parallel.
                     </div>
                   ) : null}
 

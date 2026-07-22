@@ -9,10 +9,12 @@ export interface StoreCustomer {
 
 export const customerAuthService = {
   sendOtp: (phone: string) =>
-    apiPost<{ phone: string; expiresInSeconds: number; debugOtp?: string }>(
-      '/customer-auth/otp/send',
-      { phone },
-    ),
+    apiPost<{
+      phone: string;
+      expiresInSeconds: number;
+      debugOtp?: string;
+      channels?: Array<'whatsapp' | 'sms' | 'debug'>;
+    }>('/customer-auth/otp/send', { phone }),
 
   verifyOtp: (data: { phone: string; otp: string; name?: string }) =>
     apiPost<{ customer: StoreCustomer }>('/customer-auth/otp/verify', data),

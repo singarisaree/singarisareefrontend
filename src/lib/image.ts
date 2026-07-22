@@ -14,6 +14,22 @@ export function resolveStorefrontImageUrl(src?: string | null): string {
   return `${API_ORIGIN}${path}`;
 }
 
+/** Prefer same-origin `/uploads/...` for LCP hero images (Next rewrite proxies to API). */
+export function resolveHeroImageUrl(src?: string | null): string {
+  const resolved = resolveStorefrontImageUrl(src);
+  if (!resolved) return '';
+  if (resolved.startsWith('/uploads/')) return resolved;
+  try {
+    const url = new URL(resolved);
+    if (url.pathname.startsWith('/uploads/')) {
+      return `${url.pathname}${url.search}`;
+    }
+  } catch {
+    // keep absolute URL (e.g. Cloudinary)
+  }
+  return resolved;
+}
+
 /** Uploaded WebP/JPEG assets are already optimized on the backend. */
 export function shouldUnoptimizeStorefrontImage(src: string): boolean {
   if (!src) return false;

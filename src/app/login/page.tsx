@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, Suspense, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,6 +23,7 @@ function LoginForm() {
   const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
+  const sendInFlight = useRef(false);
 
   const redirectTo = searchParams.get('next') || '/';
 
@@ -33,22 +34,35 @@ function LoginForm() {
 
   const handleSendOtp = async (event: FormEvent) => {
     event.preventDefault();
+    if (sendInFlight.current || sending) return;
+
     const cleaned = phone.replace(/\D/g, '').slice(-10);
     if (!/^[6-9]\d{9}$/.test(cleaned)) {
       toast.error('Enter a valid 10-digit mobile number');
       return;
     }
 
+    sendInFlight.current = true;
     setSending(true);
     try {
       const result = await customerAuthService.sendOtp(cleaned);
       setPhone(cleaned);
       setStep('otp');
       setDebugOtp(result.debugOtp || null);
-      toast.success(result.debugOtp ? 'OTP ready (dev mode)' : 'OTP sent on WhatsApp / SMS');
+      const channels = result.channels ?? [];
+      toast.success(
+        result.debugOtp
+          ? 'OTP ready (dev mode)'
+          : channels.includes('whatsapp') && channels.includes('sms')
+            ? 'OTP sent on WhatsApp and SMS — use either'
+            : channels.includes('whatsapp')
+              ? 'OTP sent on WhatsApp'
+              : 'OTP sent by SMS',
+      );
     } catch (error) {
       toast.error(getApiErrorMessage(error, 'Could not send OTP'));
     } finally {
+      sendInFlight.current = false;
       setSending(false);
     }
   };
