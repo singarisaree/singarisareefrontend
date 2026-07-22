@@ -126,11 +126,15 @@ export function AdminFormTextarea({
   value,
   onChange,
   rows = 4,
+  hint,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   rows?: number;
+  hint?: string;
+  placeholder?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -139,8 +143,10 @@ export function AdminFormTextarea({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
+        placeholder={placeholder}
         className={textareaClass}
       />
+      {hint ? <p className="text-xs text-[#64748b]">{hint}</p> : null}
     </div>
   );
 }

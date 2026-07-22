@@ -38,6 +38,7 @@ export default function AdminAddProductPage() {
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
+  const [productDetails, setProductDetails] = useState('');
   const [fabric, setFabric] = useState('');
   const [price, setPrice] = useState('');
   const [mrp, setMrp] = useState('');
@@ -70,6 +71,7 @@ export default function AdminAddProductPage() {
           name: name.trim(),
           categoryId,
           description: description.trim(),
+          productDetails: productDetails.trim() || undefined,
           fabric: fabric.trim() || undefined,
           price: Number(price),
           mrp: Number(mrp),
@@ -276,6 +278,23 @@ export default function AdminAddProductPage() {
             onChange={(e) => setDescription(e.target.value)}
             className="w-full rounded-lg border border-[#e2e8f0] px-3 py-2 text-sm focus:border-[#0f172a] focus:outline-none"
           />
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="productDetails" className="text-sm font-medium text-[#334155]">
+            Product details (bullet points)
+          </label>
+          <textarea
+            id="productDetails"
+            rows={5}
+            value={productDetails}
+            onChange={(e) => setProductDetails(e.target.value)}
+            placeholder={'Pure silk weave\nHandcrafted zari border\nIncludes matching blouse piece'}
+            className="w-full rounded-lg border border-[#e2e8f0] px-3 py-2 text-sm placeholder:text-[#94a3b8] focus:border-[#0f172a] focus:outline-none"
+          />
+          <p className="text-xs text-[#64748b]">
+            Enter one detail per line. Each line will show as a • bullet on the product page.
+          </p>
         </div>
 
         <div className="space-y-2">

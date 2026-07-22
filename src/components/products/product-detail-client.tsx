@@ -83,6 +83,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         ? `${(product.weight / 1000).toFixed(product.weight % 1000 === 0 ? 0 : 2)} kg`
         : `${product.weight} g`
       : null;
+  const productDetailPoints = (product.productDetails || '')
+    .split('\n')
+    .map((line) => line.replace(/^[\s•\-\*\d.)]+/, '').trim())
+    .filter(Boolean);
 
   const goToPrevImage = (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -148,7 +152,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     alt={product.name}
                     fill
                     sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-contain p-1 pb-8"
+                    className="object-contain object-center p-2 pb-10"
                     priority={selectedImageIndex === 0}
                     loading={selectedImageIndex === 0 ? undefined : 'lazy'}
                     quality={80}
@@ -205,7 +209,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                         i === selectedImageIndex ? 'border-gold' : 'border-gold/20 hover:border-gold/50'
                       }`}
                     >
-                      <Image src={img.url} alt="" fill sizes="4rem" className="object-cover" loading="lazy" />
+                      <Image src={img.url} alt="" fill sizes="4rem" className="object-contain object-center p-0.5" loading="lazy" />
                     </button>
                   ))}
                 </div>
@@ -396,6 +400,23 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 <h2 className="font-serif text-lg text-maroon">Description</h2>
                 <p className="mt-2 text-sm leading-relaxed text-brown-light">{product.description}</p>
               </div>
+
+              {productDetailPoints.length > 0 ? (
+                  <div>
+                    <h2 className="font-serif text-lg text-maroon">Product details</h2>
+                    <ul className="mt-3 space-y-2">
+                      {productDetailPoints.map((point, index) => (
+                        <li
+                          key={`${index}-${point}`}
+                          className="flex gap-2.5 text-sm leading-relaxed text-brown-light"
+                        >
+                          <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-maroon" aria-hidden />
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+              ) : null}
 
               <ShippingReturnsAccordion />
 

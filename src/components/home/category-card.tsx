@@ -34,7 +34,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
             alt={category.name}
             fill
             sizes="160px"
-            className="object-cover transition-transform duration-700 group-hover:scale-105"
+            className="object-contain object-center transition-transform duration-700 group-hover:scale-[1.02]"
             loading="lazy"
             quality={80}
           />

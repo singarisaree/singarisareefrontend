@@ -41,6 +41,7 @@ export interface Product {
   categoryId: string;
   category?: { id: string; name: string; slug: string };
   description: string;
+  productDetails?: string | null;
   fabric?: string;
   care?: string;
   shippingInfo?: string;

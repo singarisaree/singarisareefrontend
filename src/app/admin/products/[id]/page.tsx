@@ -54,6 +54,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [productDetails, setProductDetails] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [price, setPrice] = useState('');
   const [mrp, setMrp] = useState('');
@@ -92,6 +93,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
     if (product) {
       setName(product.name);
       setDescription(product.description);
+      setProductDetails(product.productDetails || '');
       setCategoryId(product.categoryId);
       setPrice(String(product.price));
       setMrp(String(product.mrp));
@@ -380,6 +382,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
           ? {
               name: name.trim(),
               description: description.trim(),
+              productDetails: productDetails.trim() || null,
               categoryId,
               price: Number(price),
               mrp: Number(mrp),
@@ -480,6 +483,16 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
             </div>
             <div className="mt-4">
               <AdminFormTextarea label="Description" value={description} onChange={setDescription} rows={5} />
+            </div>
+            <div className="mt-4">
+              <AdminFormTextarea
+                label="Product details (bullet points)"
+                value={productDetails}
+                onChange={setProductDetails}
+                rows={5}
+                placeholder={'Pure silk weave\nHandcrafted zari border\nIncludes matching blouse piece'}
+                hint="One detail per line. Each line shows as a • bullet on the product page."
+              />
             </div>
           </AdminDetailSection>
 

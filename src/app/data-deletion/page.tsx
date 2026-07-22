@@ -8,7 +8,7 @@ export default function DataDeletionPage() {
     <PolicyPage title="Data Deletion Request" lastUpdated="July 20, 2026">
       <p>
         If you would like us to delete your personal data, please email us at{' '}
-        <a href="mailto:support@singarisarees.com" className="text-maroon hover:underline">
+        <a href="mailto:singarisaree@gmail.com" className="text-maroon hover:underline">
           support@singarisarees.com
         </a>{' '}
         with your registered phone number and order details. We will process your request in
