@@ -41,10 +41,14 @@ export function formatDateTime(date: string | Date): string {
   return `${formatDate(date)}, ${formatTime(date)}`;
 }
 
-/** Short customer-facing order ID (last 8 chars). Used across the whole app. */
+/** Customer-facing order ID. Numeric IDs shown as-is; legacy alphanumeric uses last 8 chars. */
 export function formatShortOrderNumber(orderNumber: string): string {
   if (!orderNumber) return '';
-  return orderNumber.length > 8 ? orderNumber.slice(-8) : orderNumber;
+  const trimmed = orderNumber.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return trimmed.length > 8 ? trimmed.slice(-8) : trimmed;
+  }
+  return trimmed.length > 8 ? trimmed.slice(-8) : trimmed;
 }
 
 export function getOrderListDateText(order: {
