@@ -84,6 +84,27 @@ export function ProductImageLightbox({
     };
   }, [goTo, index, onClose, open]);
 
+  // Mobile browser back should close the zoom viewer, not leave the product page.
+  useEffect(() => {
+    if (!open) return;
+
+    let closedByPopState = false;
+    window.history.pushState({ __productImageLightbox: true }, '');
+
+    const handlePopState = () => {
+      closedByPopState = true;
+      onClose();
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      if (!closedByPopState) {
+        window.history.back();
+      }
+    };
+  }, [open, onClose]);
+
   if (!open || !images.length) return null;
 
   const current = images[index] ?? images[0];

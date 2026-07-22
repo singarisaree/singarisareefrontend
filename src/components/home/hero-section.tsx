@@ -93,7 +93,7 @@ export function HeroSection({ banners }: HeroSectionProps) {
                   className="object-cover object-top"
                   unoptimized={shouldUnoptimizeStorefrontImage(mobileImage)}
                 />
-                <div className="absolute inset-0 bg-cream/10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-cream via-cream/35 to-cream/5" />
               </div>
             ) : null}
             {desktopImage ? (
@@ -124,8 +124,8 @@ export function HeroSection({ banners }: HeroSectionProps) {
         </svg>
       </div>
 
-      <div className="relative mx-auto flex max-w-[90rem] flex-col px-4 py-12 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-10 lg:py-16">
-        {/* Left content */}
+      <div className="relative mx-auto flex min-h-[32rem] max-w-[90rem] flex-col justify-end px-4 pb-14 pt-12 sm:min-h-[38rem] sm:justify-center sm:px-6 sm:pb-12 sm:pt-12 lg:min-h-[42rem] lg:flex-row lg:items-center lg:justify-between lg:px-10 lg:py-16">
+        {/* Left content — bottom-aligned on mobile so the hero image stays visible */}
         <motion.div
           key={banner?.id || 'fallback'}
           initial={{ opacity: 0, y: 8 }}
@@ -194,7 +194,7 @@ export function HeroSection({ banners }: HeroSectionProps) {
           >
             <ChevronRight className="h-6 w-6" />
           </button>
-          <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/20 px-3 py-2 backdrop-blur-sm">
+          <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/20 px-3 py-2 backdrop-blur-sm sm:bottom-5">
             {slides.map((slide, index) => (
               <button
                 key={slide.id}

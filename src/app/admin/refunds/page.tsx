@@ -125,10 +125,9 @@ export default function AdminRefundsPage() {
   const openRefundModal = (order: RefundEligibleOrder) => {
     setSelectedOrder(order);
     const eligible = order.eligibleAmount ?? order.grandTotal;
-    const shipping = Math.max(0, Number(order.shippingCharge) || 0);
-    const suggested = Math.max(0, eligible - shipping);
-    setDeduction(String(shipping));
-    setCouponAmount(String(suggested));
+    // Default to full eligible credit; admin can opt to deduct shipping.
+    setDeduction("0");
+    setCouponAmount(String(Math.max(0, eligible)));
     setIssuedCouponCode(null);
   };
 
@@ -401,60 +400,140 @@ export default function AdminRefundsPage() {
                 </p>
 
                 <div className="mt-4 space-y-4">
-                  <div>
-                    <Label>Shipping deduction</Label>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      {[
-                        { label: "No deduction", value: 0 },
-                        {
-                          label: `Deduct shipping (${formatPrice(Number(selectedOrder.shippingCharge) || 0)})`,
-                          value: Math.min(
-                            selectedOrder.eligibleAmount ??
-                              selectedOrder.grandTotal,
-                            Math.max(
-                              0,
-                              Number(selectedOrder.shippingCharge) || 0,
-                            ),
-                          ),
-                        },
-                      ].map((option) => (
-                        <button
-                          key={option.label}
-                          type="button"
-                          onClick={() => {
-                            const eligible =
-                              selectedOrder.eligibleAmount ??
-                              selectedOrder.grandTotal;
-                            setDeduction(String(option.value));
-                            setCouponAmount(
-                              String(Math.max(0, eligible - option.value)),
-                            );
-                          }}
-                          className={`rounded-lg border px-3 py-2 text-sm font-semibold ${
-                            Number(deduction) === option.value
-                              ? "border-[#0f172a] bg-[#0f172a] text-white"
-                              : "border-[#e2e8f0] bg-white text-[#475569] hover:bg-[#f8fafc]"
-                          }`}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="couponAmount">Coupon Amount</Label>
-                    <Input
-                      id="couponAmount"
-                      type="number"
-                      min={1}
-                      max={maxCouponAmount}
-                      value={couponAmount}
-                      onChange={(e) => setCouponAmount(e.target.value)}
-                    />
-                    <p className="mt-1 text-xs text-[#64748b]">
-                      Max coupon value: {formatPrice(maxCouponAmount)}
-                    </p>
-                  </div>
+                  {(() => {
+                    const eligible =
+                      selectedOrder.eligibleAmount ?? selectedOrder.grandTotal;
+                    const shippingCharge = Math.max(
+                      0,
+                      Number(selectedOrder.shippingCharge) || 0,
+                    );
+                    const shippingDeductOption = Math.min(
+                      eligible,
+                      shippingCharge,
+                    );
+                    const deductValue = Math.max(0, Number(deduction) || 0);
+                    const applyShipping = deductValue > 0 && shippingCharge > 0;
+
+                    const setRefundAmounts = (nextDeduction: number) => {
+                      const capped = Math.min(
+                        eligible,
+                        Math.max(0, nextDeduction),
+                      );
+                      setDeduction(String(capped));
+                      setCouponAmount(String(Math.max(0, eligible - capped)));
+                    };
+
+                    return (
+                      <>
+                        <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[#64748b]">
+                            Credit breakdown
+                          </p>
+                          <dl className="mt-3 space-y-2 text-sm">
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-[#64748b]">Eligible amount</dt>
+                              <dd className="font-medium text-[#0f172a]">
+                                {formatPrice(eligible)}
+                              </dd>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <dt className="text-[#64748b]">
+                                Shipping deducted
+                              </dt>
+                              <dd className="font-medium text-[#0f172a]">
+                                {applyShipping
+                                  ? `− ${formatPrice(deductValue)}`
+                                  : formatPrice(0)}
+                              </dd>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 border-t border-[#e2e8f0] pt-2">
+                              <dt className="font-semibold text-[#0f172a]">
+                                Store credit coupon
+                              </dt>
+                              <dd className="text-base font-bold text-[#0f172a]">
+                                {formatPrice(Number(couponAmount) || 0)}
+                              </dd>
+                            </div>
+                          </dl>
+                        </div>
+
+                        {shippingCharge > 0 ? (
+                          <div>
+                            <Label>Shipping charge</Label>
+                            <p className="mt-1 text-xs text-[#64748b]">
+                              Order shipping was {formatPrice(shippingCharge)}.
+                              Choose whether to keep it in the coupon or deduct
+                              it.
+                            </p>
+                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                              {[
+                                {
+                                  label: "Keep full amount",
+                                  hint: "No shipping deducted",
+                                  value: 0,
+                                },
+                                {
+                                  label: "Deduct shipping",
+                                  hint: `Minus ${formatPrice(shippingDeductOption)}`,
+                                  value: shippingDeductOption,
+                                },
+                              ].map((option) => (
+                                <button
+                                  key={option.label}
+                                  type="button"
+                                  onClick={() => setRefundAmounts(option.value)}
+                                  className={`rounded-lg border px-3 py-2.5 text-left ${
+                                    Number(deduction) === option.value
+                                      ? "border-[#0f172a] bg-[#0f172a] text-white"
+                                      : "border-[#e2e8f0] bg-white text-[#475569] hover:bg-[#f8fafc]"
+                                  }`}
+                                >
+                                  <span className="block text-sm font-semibold">
+                                    {option.label}
+                                  </span>
+                                  <span
+                                    className={`mt-0.5 block text-xs ${
+                                      Number(deduction) === option.value
+                                        ? "text-white/70"
+                                        : "text-[#94a3b8]"
+                                    }`}
+                                  >
+                                    {option.hint}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-xs text-[#64748b]">
+                            No shipping charge on this order — full eligible
+                            amount can be issued as store credit.
+                          </p>
+                        )}
+
+                        <div>
+                          <Label htmlFor="couponAmount">
+                            Adjust coupon amount (optional)
+                          </Label>
+                          <Input
+                            id="couponAmount"
+                            type="number"
+                            min={1}
+                            max={maxCouponAmount}
+                            step="1"
+                            value={couponAmount}
+                            onChange={(e) => setCouponAmount(e.target.value)}
+                            className="mt-1.5"
+                          />
+                          <p className="mt-1 text-xs text-[#64748b]">
+                            You can issue up to {formatPrice(maxCouponAmount)}.
+                            Leave as calculated unless you need a smaller
+                            credit.
+                          </p>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="mt-6 flex justify-end gap-2">

@@ -45,7 +45,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-dark/70 via-charcoal-dark/20 to-transparent" />
         <div className="absolute bottom-0 left-0 p-4 sm:p-5">
-          <h3 className="font-serif text-sm font-medium tracking-wide text-white sm:text-base">
+          <h3 className="font-serif text-[1.09375rem] font-medium tracking-wide text-white sm:text-[1.25rem]">
             {category.name}
           </h3>
           <span className="mt-1 inline-flex items-center gap-1 text-[0.65rem] font-semibold tracking-[0.15em] text-gold-light transition-colors group-hover:text-gold sm:text-xs">
