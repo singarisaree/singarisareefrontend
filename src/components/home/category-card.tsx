@@ -27,14 +27,14 @@ export function CategoryCard({ category }: CategoryCardProps) {
       onFocus={warmRoute}
       onTouchStart={warmRoute}
     >
-      <div className="relative aspect-[3/5] bg-beige">
+      <div className="relative aspect-[3/4] overflow-hidden bg-beige">
         {category.imageUrl ? (
           <Image
             src={category.imageUrl}
             alt={category.name}
             fill
             sizes="160px"
-            className="object-contain object-center transition-transform duration-700 group-hover:scale-[1.02]"
+            className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
             loading="lazy"
             quality={80}
           />

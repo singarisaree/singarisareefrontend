@@ -29,7 +29,7 @@ export function ProductCard({ product, variant = 'default', priority = false }: 
                   ? '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw'
                   : '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw'
               }
-              className="object-contain object-center transition-transform duration-700 group-hover:scale-[1.02]"
+              className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
               priority={priority}
               loading={priority ? undefined : 'lazy'}
               quality={80}

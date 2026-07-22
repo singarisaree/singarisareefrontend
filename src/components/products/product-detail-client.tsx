@@ -132,11 +132,11 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <div className="flex h-[min(72dvh,640px)] flex-col sm:h-[min(68dvh,680px)] lg:h-[min(calc(100dvh-7rem),720px)]">
+            <div className="flex flex-col">
               <div
                 role="button"
                 tabIndex={0}
-                className="group relative min-h-0 flex-1 cursor-zoom-in overflow-hidden rounded-lg bg-beige text-left"
+                className="group relative aspect-[3/4] w-full max-h-[min(78dvh,720px)] cursor-zoom-in overflow-hidden rounded-lg bg-beige text-left"
                 onClick={() => setLightboxOpen(true)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' || event.key === ' ') {
@@ -152,7 +152,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                     alt={product.name}
                     fill
                     sizes="(max-width: 1024px) 100vw, 50vw"
-                    className="object-contain object-center p-2 pb-10"
+                    className="object-cover object-center"
                     priority={selectedImageIndex === 0}
                     loading={selectedImageIndex === 0 ? undefined : 'lazy'}
                     quality={80}
@@ -205,11 +205,18 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                       key={img.id}
                       type="button"
                       onClick={() => setSelectedImageIndex(i)}
-                      className={`relative h-[4.5rem] w-[3.5rem] shrink-0 overflow-hidden rounded border-2 transition-colors sm:h-20 sm:w-16 ${
+                      className={`relative aspect-[3/4] h-20 w-auto shrink-0 overflow-hidden rounded border-2 transition-colors sm:h-24 ${
                         i === selectedImageIndex ? 'border-gold' : 'border-gold/20 hover:border-gold/50'
                       }`}
                     >
-                      <Image src={img.url} alt="" fill sizes="4rem" className="object-contain object-center p-0.5" loading="lazy" />
+                      <Image
+                        src={img.url}
+                        alt=""
+                        fill
+                        sizes="4rem"
+                        className="object-cover object-center"
+                        loading="lazy"
+                      />
                     </button>
                   ))}
                 </div>
