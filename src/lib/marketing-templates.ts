@@ -14,6 +14,5 @@ export function renderMarketingPreview(
     replaceName(story.trim()),
     '',
     '— Team Singari Sarees',
-    'https://www.singarisaree.com',
   ].join('\n');
 }

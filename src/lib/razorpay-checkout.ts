@@ -153,7 +153,8 @@ export async function openRazorpayCheckout(
         shortOrderId: formatShortOrderNumber(input.orderNumber),
       },
       theme: { color: '#C4A35A' },
-      remember_customer: true,
+      retry: { enabled: false },
+      remember_customer: false,
       modal: {
         animation: true,
         confirm_close: true,
@@ -163,21 +164,26 @@ export async function openRazorpayCheckout(
           finish({ status: 'dismissed' });
         },
       },
-      handler: async (response) => {
-        try {
-          input.onVerifying?.();
-          await orderService.verifyPayment({
+      handler: (response) => {
+        if (settled) return;
+        settled = true;
+        input.onVerifying?.();
+
+        void orderService
+          .verifyPayment({
             orderNumber: input.orderNumber,
             razorpayOrderId: response.razorpay_order_id,
             razorpayPaymentId: response.razorpay_payment_id,
             razorpaySignature: response.razorpay_signature,
+          })
+          .then(async () => {
+            await input.onSuccess?.();
+            finish({ status: 'paid' });
+          })
+          .catch(() => {
+            // Payment may have succeeded — let the status page poll and confirm.
+            finish({ status: 'verify_pending' });
           });
-          await input.onSuccess?.();
-          finish({ status: 'paid' });
-        } catch {
-          // Payment may have succeeded — let the status page poll and confirm.
-          finish({ status: 'verify_pending' });
-        }
       },
     });
 

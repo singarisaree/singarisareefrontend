@@ -44,6 +44,7 @@ import { useCartSync } from '@/hooks/use-cart-sync';
 import { useCouponSync } from '@/hooks/use-coupon-sync';
 import { detectUserAddress, getLocationErrorMessage } from '@/lib/detect-location';
 import { openRazorpayCheckout, preloadRazorpayScript } from '@/lib/razorpay-checkout';
+import { isOrderPaymentSuccess } from '@/lib/order-payment-status';
 import {
   PaymentStatusOverlay,
   type PaymentOverlayPhase,
@@ -747,6 +748,8 @@ export default function CheckoutPage() {
   };
 
   const onSubmit = async (data: CheckoutForm) => {
+    if (isSubmitting) return;
+
     if (!canProceedToPayment) {
       toast.error(
         shippingStatus === 'unavailable'
@@ -827,6 +830,14 @@ export default function CheckoutPage() {
 
       if (!result.razorpayOrderId || !result.keyId) {
         throw new Error('Payment session was not created');
+      }
+
+      const existingPayment = await orderService.getPaymentStatus(orderNumber);
+      if (isOrderPaymentSuccess(existingPayment)) {
+        clearCheckoutDraft();
+        clearCart();
+        router.replace(`/order/success?order_id=${encodeURIComponent(orderNumber)}`);
+        return;
       }
 
       clearCheckoutDraft();

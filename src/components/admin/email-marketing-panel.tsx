@@ -8,6 +8,8 @@ import {
   adminEmailMarketingService,
   adminMarketingService,
 } from '@/services/admin.service';
+import { resolveStorefrontImageUrl } from '@/lib/image';
+import { OptimizedImage } from '@/components/ui/optimized-image';
 
 interface EmailMarketingPanelProps {
   selectedIds: Set<string>;
@@ -95,7 +97,13 @@ export function EmailMarketingPanel({
       toast.success(`Email campaign queued for ${result.recipientCount} recipient(s)`);
       queryClient.invalidateQueries({ queryKey: ['admin-email-marketing-campaigns'] });
     },
-    onError: () => toast.error('Could not queue email campaign. Check SMTP settings and recipients.'),
+    onError: (error: unknown) => {
+      const message =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      toast.error(message || 'Could not queue email campaign. Check SMTP settings and recipients.');
+    },
   });
 
   const applyTemplate = (key: string) => {
@@ -129,6 +137,7 @@ export function EmailMarketingPanel({
     }
   };
 
+  const previewImageSrc = imageUrl ? resolveStorefrontImageUrl(imageUrl) : '';
   const eligibleCount = eligibility?.eligibleCount ?? 0;
   const canSend =
     previewReady &&
@@ -221,10 +230,22 @@ export function EmailMarketingPanel({
                 className="hidden"
               />
             </label>
-            {imageUrl ? (
-              <div className="flex items-center justify-between rounded-lg bg-[#f8fafc] px-3 py-2 text-xs text-[#64748b]">
-                <span>Image attached</span>
-                <button type="button" onClick={() => setImageUrl('')} aria-label="Remove image">
+            {previewImageSrc ? (
+              <div className="relative mt-2 h-36 w-full max-w-sm overflow-hidden rounded-lg border border-[#e2e8f0] bg-[#f8fafc]">
+                <OptimizedImage
+                  src={previewImageSrc}
+                  alt="Campaign preview"
+                  fill
+                  sizes="384px"
+                  unoptimized
+                  className="object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setImageUrl('')}
+                  className="absolute right-2 top-2 rounded-full bg-white/90 p-1 shadow"
+                  aria-label="Remove image"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>

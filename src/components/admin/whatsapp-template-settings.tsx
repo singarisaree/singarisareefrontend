@@ -9,6 +9,7 @@ import {
   type WhatsAppTemplateRecord,
 } from "@/services/admin.service";
 import { OptimizedImage } from "@/components/ui/optimized-image";
+import { resolveStorefrontImageUrl } from "@/lib/image";
 
 const TITLES: Record<WhatsAppTemplateKind, string> = {
   order_placed: "Order placed",
@@ -523,7 +524,7 @@ export function WhatsAppTemplateSettings() {
                       {template.headerPreviewUrl ? (
                         <div className="relative aspect-[2/1] max-w-md overflow-hidden rounded-lg border border-[#e2e8f0]">
                           <OptimizedImage
-                            src={template.headerPreviewUrl}
+                            src={resolveStorefrontImageUrl(template.headerPreviewUrl)}
                             alt="WhatsApp template sample"
                             fill
                             sizes="448px"
@@ -637,7 +638,7 @@ export function WhatsAppTemplateSettings() {
                         template.headerPreviewUrl ? (
                           <div className="relative mb-3 aspect-[2/1] overflow-hidden rounded-md">
                             <OptimizedImage
-                              src={template.headerPreviewUrl}
+                              src={resolveStorefrontImageUrl(template.headerPreviewUrl)}
                               alt=""
                               fill
                               sizes="512px"

@@ -17,6 +17,7 @@ import {
   CheckSquare,
   Square,
   LinkIcon,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -47,6 +48,7 @@ import {
 } from '@/lib/use-admin-list-filters';
 import { AdminPagination } from '@/components/admin/admin-pagination';
 import { renderMarketingPreview } from '@/lib/marketing-templates';
+import { resolveStorefrontImageUrl } from '@/lib/image';
 import { EmailMarketingPanel } from '@/components/admin/email-marketing-panel';
 
 type Tab = 'users' | 'marketing' | 'email-marketing';
@@ -206,7 +208,13 @@ export default function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ['admin-marketing-campaigns'] });
       queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
     },
-    onError: () => toast.error('Failed to send marketing messages'),
+    onError: (error: unknown) => {
+      const message =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          : undefined;
+      toast.error(message || 'Failed to send marketing messages');
+    },
   });
 
   const stats = useMemo(() => {
@@ -222,6 +230,7 @@ export default function AdminUsersPage() {
   }, [customers, customersMeta?.total]);
 
   const previewMessage = renderMarketingPreview(heading, story, previewName);
+  const previewImageSrc = imageUrl ? resolveStorefrontImageUrl(imageUrl) : '';
 
   const selectMarketingTemplate = (kind: MarketingTemplateKind) => {
     const template = whatsAppTemplates.find((item) => item.kind === kind);
@@ -500,25 +509,41 @@ export default function AdminUsersPage() {
                 <label className="text-sm font-medium text-[#334155]">
                   Image {selectedTemplateKind === 'marketing_image' ? '(required)' : '(optional)'}
                 </label>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={imageUploading}
-                  onChange={(e) => handleImageUpload(e.target.files?.[0] ?? null)}
-                  className="block w-full text-sm"
-                />
-                {imageUrl && (
-                  <div className="relative mt-2 h-32 w-full max-w-xs overflow-hidden rounded-lg border border-[#e2e8f0]">
-                    <OptimizedImage src={imageUrl} alt="Marketing" fill sizes="320px" className="object-cover" />
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[#cbd5e1] px-4 py-3 text-sm text-[#475569] hover:bg-[#f8fafc]">
+                  {imageUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Upload className="h-4 w-4" />
+                  )}
+                  {imageUploading ? 'Uploading...' : 'Choose campaign image'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={imageUploading}
+                    onChange={(e) => void handleImageUpload(e.target.files?.[0] ?? null)}
+                    className="hidden"
+                  />
+                </label>
+                {previewImageSrc ? (
+                  <div className="relative mt-2 h-40 w-full max-w-sm overflow-hidden rounded-lg border border-[#e2e8f0] bg-[#f8fafc]">
+                    <OptimizedImage
+                      src={previewImageSrc}
+                      alt="Marketing preview"
+                      fill
+                      sizes="384px"
+                      unoptimized
+                      className="object-cover"
+                    />
                     <button
                       type="button"
                       onClick={() => setImageUrl('')}
                       className="absolute right-2 top-2 rounded-full bg-white/90 p-1 shadow"
+                      aria-label="Remove image"
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
-                )}
+                ) : null}
               </div>
 
               <div className="space-y-2">
@@ -568,19 +593,11 @@ export default function AdminUsersPage() {
               <div className="rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#64748b]">WhatsApp Preview</p>
                 <pre className="whitespace-pre-wrap font-sans text-sm text-[#334155]">{previewMessage}</pre>
-                {campaignLink && (
+                {campaignLink ? (
                   <a href={campaignLink} target="_blank" rel="noreferrer" className="mt-3 block break-all text-sm font-medium text-blue-600 underline">
                     {campaignLink}
                   </a>
-                )}
-                <a
-                  href="https://www.singarisaree.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 block text-sm font-medium text-blue-600 underline"
-                >
-                  https://www.singarisaree.com
-                </a>
+                ) : null}
               </div>
 
               <div className="space-y-3 border-t border-[#e2e8f0] pt-4">
