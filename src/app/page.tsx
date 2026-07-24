@@ -8,6 +8,7 @@ import { SectionHeading } from '@/components/home/section-heading';
 import { CategoryCard } from '@/components/home/category-card';
 import { OurStorySection } from '@/components/home/our-story-section';
 import { NewsletterBanner } from '@/components/home/newsletter-banner';
+import { InstagramReelsSlider } from '@/components/home/instagram-reels-slider';
 import { ProductCard } from '@/components/products/product-card';
 import { ProductRoutesPrefetch } from '@/components/storefront/product-routes-prefetch';
 import { StoreSettingsSync } from '@/components/store-settings-provider';
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
-export const revalidate = 15;
+export const revalidate = 60;
 
 async function loadHomepageData() {
   try {
@@ -36,7 +37,7 @@ async function loadHomepageData() {
         .getProducts({ limit: '10', sortBy: 'createdAt', sortOrder: 'desc' })
         .catch(() => [] as Product[]),
     ]);
-    return { banners, categories, products, settings };
+    return { banners, categories, products, settings, instagramReels: [] };
   }
 }
 
@@ -53,7 +54,8 @@ async function HomeHero() {
 }
 
 async function HomeBelowFold() {
-  const { categories, products, settings } = await loadHomepageData();
+  const { categories, products, settings, instagramReels = [] } = await loadHomepageData();
+  const reelUrls = instagramReels.map((reel) => reel.videoUrl);
 
   return (
     <>
@@ -69,7 +71,7 @@ async function HomeBelowFold() {
               {categories.slice(0, 100).map((category) => (
                 <div
                   key={category.id}
-                  className="w-[42vw] max-w-[11.5rem] shrink-0 sm:w-40 sm:max-w-none lg:w-44"
+                  className="w-[48vw] max-w-[13.25rem] shrink-0 sm:w-48 sm:max-w-none lg:w-56"
                 >
                   <CategoryCard category={category} />
                 </div>
@@ -121,6 +123,9 @@ async function HomeBelowFold() {
             </svg>
             <span className="text-xs font-medium tracking-wide text-maroon">INSTAGRAM</span>
           </div>
+          {reelUrls.length > 0 && (
+            <InstagramReelsSlider urls={reelUrls} className="mt-8 text-left" />
+          )}
           <h2 className="mt-5 font-serif text-2xl tracking-wide text-charcoal sm:text-3xl">
             Join Our Saree Community
           </h2>
@@ -129,7 +134,7 @@ async function HomeBelowFold() {
             new drops and exclusive offers.
           </p>
           <a
-            href="https://www.instagram.com/sareeby_singari?igsh=MWZjMnJzemF2MW1kZQ%3D%3D&utm_source=qr"
+            href="https://www.instagram.com/sareeby_singari?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw=="
             target="_blank"
             rel="noopener noreferrer"
             className="group mt-7 inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-[#f09433] via-[#e6683c] to-[#dc2743] px-7 py-3 text-sm font-semibold text-white shadow-lg shadow-pink-500/25 transition-all hover:scale-105 hover:shadow-pink-500/40"

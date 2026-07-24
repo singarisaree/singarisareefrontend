@@ -9,7 +9,7 @@ export default function DataDeletionPage() {
       <p>
         If you would like us to delete your personal data, please email us at{' '}
         <a href="mailto:singarisaree@gmail.com" className="text-maroon hover:underline">
-          support@singarisarees.com
+          singarisaree@gmail.com
         </a>{' '}
         with your registered phone number and order details. We will process your request in
         accordance with applicable laws and respond within a reasonable timeframe.

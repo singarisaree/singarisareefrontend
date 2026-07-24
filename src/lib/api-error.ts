@@ -27,6 +27,10 @@ export function getApiErrorMessage(
   }
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as ApiResponse | undefined;
+    const fieldError = data?.errors?.[0]?.message;
+    if (typeof fieldError === 'string' && fieldError.trim()) {
+      return fieldError;
+    }
     if (typeof data?.message === 'string' && data.message.trim()) {
       return data.message;
     }

@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckoutSkeleton } from '@/components/storefront/page-skeletons';
-import { Footer } from '@/components/layout/footer';
 import { CountrySelect } from '@/components/checkout/country-select';
 import { useCartStore } from '@/stores/cart-store';
 import { orderService } from '@/services/store.service';
@@ -44,7 +43,7 @@ import { useCartSync } from '@/hooks/use-cart-sync';
 import { useCouponSync } from '@/hooks/use-coupon-sync';
 import { detectUserAddress, getLocationErrorMessage } from '@/lib/detect-location';
 import { openRazorpayCheckout, preloadRazorpayScript } from '@/lib/razorpay-checkout';
-import { isOrderPaymentSuccess } from '@/lib/order-payment-status';
+import { orderPaymentResultHref } from '@/lib/order-payment-routes';
 import {
   PaymentStatusOverlay,
   type PaymentOverlayPhase,
@@ -270,7 +269,10 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     void preloadRazorpayScript();
-  }, []);
+    router.prefetch('/order/success');
+    router.prefetch('/order/failed');
+    router.prefetch('/order/pending');
+  }, [router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -777,42 +779,44 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
     const needsGateway = grandTotal > 0;
-    setPaymentPhase(needsGateway ? 'creating' : 'placing');
-    if (needsGateway) {
-      void preloadRazorpayScript();
-    }
+    setPaymentPhase('processing');
+    // SDK is preloaded on mount; kick again in case the first load failed.
+    const sdkReady = needsGateway ? preloadRazorpayScript() : Promise.resolve();
     let createdOrderNumber: string | null = null;
     try {
       const phone = buildCheckoutPhone(data.customerPhone, selectedCountry);
-      const result = await orderService.checkout({
-        customerName: data.customerName,
-        customerPhone: phone,
-        customerEmail: data.customerEmail,
-        shippingAddress: {
-          country: data.country,
-          countryCode: data.countryCode,
-          state: data.state,
-          city: data.city,
-          postalCode: data.postalCode,
-          addressLine1: data.addressLine1,
-          addressLine2: data.addressLine2,
-          landmark: data.landmark,
-          ...(deliveryCoordinates
-            ? {
-                latitude: deliveryCoordinates.latitude,
-                longitude: deliveryCoordinates.longitude,
-              }
-            : {}),
-          preferredShipping:
-            preferredShipping === 'QUICK' && quickQuote ? 'QUICK' : 'STANDARD',
-        },
-        items: items.map((i) => ({
-          productId: i.productId,
-          productColorId: i.productColorId,
-          quantity: i.quantity,
-        })),
-        couponCode: couponCode || undefined,
-      });
+      const [result] = await Promise.all([
+        orderService.checkout({
+          customerName: data.customerName,
+          customerPhone: phone,
+          customerEmail: data.customerEmail,
+          shippingAddress: {
+            country: data.country,
+            countryCode: data.countryCode,
+            state: data.state,
+            city: data.city,
+            postalCode: data.postalCode,
+            addressLine1: data.addressLine1,
+            addressLine2: data.addressLine2,
+            landmark: data.landmark,
+            ...(deliveryCoordinates
+              ? {
+                  latitude: deliveryCoordinates.latitude,
+                  longitude: deliveryCoordinates.longitude,
+                }
+              : {}),
+            preferredShipping:
+              preferredShipping === 'QUICK' && quickQuote ? 'QUICK' : 'STANDARD',
+          },
+          items: items.map((i) => ({
+            productId: i.productId,
+            productColorId: i.productColorId,
+            quantity: i.quantity,
+          })),
+          couponCode: couponCode || undefined,
+        }),
+        sdkReady,
+      ]);
 
       const orderNumber = result.order?.orderNumber;
       if (!orderNumber) {
@@ -821,10 +825,9 @@ export default function CheckoutPage() {
       createdOrderNumber = orderNumber;
 
       if (result.paymentRequired === false) {
-        setPaymentPhase('placing');
         clearCheckoutDraft();
         clearCart();
-        router.replace(`/order/success?order_id=${encodeURIComponent(orderNumber)}`);
+        router.replace(orderPaymentResultHref(orderNumber, 'success'));
         return;
       }
 
@@ -832,17 +835,7 @@ export default function CheckoutPage() {
         throw new Error('Payment session was not created');
       }
 
-      const existingPayment = await orderService.getPaymentStatus(orderNumber);
-      if (isOrderPaymentSuccess(existingPayment)) {
-        clearCheckoutDraft();
-        clearCart();
-        router.replace(`/order/success?order_id=${encodeURIComponent(orderNumber)}`);
-        return;
-      }
-
-      clearCheckoutDraft();
-      clearCart();
-
+      // Open Razorpay immediately — no extra status round-trip on a fresh order.
       setPaymentPhase('checkout');
       const payResult = await openRazorpayCheckout({
         keyId: result.keyId,
@@ -853,20 +846,40 @@ export default function CheckoutPage() {
         customerName: data.customerName,
         customerEmail: data.customerEmail,
         customerPhone: phone,
-        onVerifying: () => setPaymentPhase('verifying'),
+        onVerifying: () => setPaymentPhase('processing'),
       });
 
-      setPaymentPhase('verifying');
-      router.replace(`/order/success?order_id=${encodeURIComponent(orderNumber)}`);
-
-      if (payResult.status === 'failed') {
+      if (payResult.status === 'paid') {
+        clearCheckoutDraft();
+        clearCart();
+        router.replace(orderPaymentResultHref(orderNumber, 'success'));
         return;
       }
+      if (payResult.status === 'failed') {
+        // Transaction was attempted — mark failed (visible), do not soft-delete/abandon.
+        void orderService
+          .reportPaymentFailed(orderNumber, payResult.reason)
+          .catch(() => undefined);
+        clearCheckoutDraft();
+        router.replace(orderPaymentResultHref(orderNumber, 'failed'));
+        return;
+      }
+      if (payResult.status === 'verify_pending') {
+        clearCheckoutDraft();
+        clearCart();
+        router.replace(orderPaymentResultHref(orderNumber, 'pending'));
+        return;
+      }
+
+      // Abandoned: user closed Razorpay without initiating a payment.
+      void orderService.abandonCheckout(orderNumber).catch(() => undefined);
+      setPaymentPhase(null);
+      setIsSubmitting(false);
+      toast.info('Payment cancelled. You can try again whenever you are ready.');
     } catch (error) {
       if (createdOrderNumber) {
-        setPaymentPhase('verifying');
-        router.replace(`/order/success?order_id=${encodeURIComponent(createdOrderNumber)}`);
-        return;
+        // Payment UI never completed a transaction — treat like abandon.
+        void orderService.abandonCheckout(createdOrderNumber).catch(() => undefined);
       }
       setPaymentPhase(null);
       const message =
@@ -980,21 +993,18 @@ export default function CheckoutPage() {
 
   if (items.length === 0) {
     return (
-      <>
-        <div className="mx-auto box-border flex min-h-[50vh] w-full max-w-7xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
-          <ShoppingBag className="h-16 w-16 text-gold/40" strokeWidth={1.25} aria-hidden />
-          <h1 className="mt-6 font-serif text-3xl text-charcoal">Your cart is empty</h1>
-          <p className="mt-2 max-w-md text-brown-light">
-            Browse our collections and add sarees you love — they&apos;ll appear here.
-          </p>
-          <Link href="/collections" className="mt-8">
-            <Button variant="gold" size="lg">
-              Shop Collections
-            </Button>
-          </Link>
-        </div>
-        <Footer />
-      </>
+      <div className="mx-auto box-border flex min-h-[50vh] w-full max-w-7xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
+        <ShoppingBag className="h-16 w-16 text-gold/40" strokeWidth={1.25} aria-hidden />
+        <h1 className="mt-6 font-serif text-3xl text-charcoal">Your cart is empty</h1>
+        <p className="mt-2 max-w-md text-brown-light">
+          Browse our collections and add sarees you love — they&apos;ll appear here.
+        </p>
+        <Link href="/collections" className="mt-8">
+          <Button variant="gold" size="lg">
+            Shop Collections
+          </Button>
+        </Link>
+      </div>
     );
   }
 
@@ -1476,13 +1486,9 @@ export default function CheckoutPage() {
                     disabled={isSubmitting || authLoading || !canProceedToPayment}
                   >
                     {isSubmitting
-                      ? paymentPhase === 'placing'
-                        ? 'Placing order…'
-                        : paymentPhase === 'verifying'
-                          ? 'Confirming order…'
-                          : paymentPhase === 'checkout'
-                            ? 'Complete payment…'
-                            : 'Preparing order…'
+                      ? paymentPhase === 'checkout'
+                        ? 'Complete payment…'
+                        : 'Processing…'
                       : shippingStatus === 'unavailable'
                         ? 'Delivery unavailable'
                         : !isLoggedIn
@@ -1506,7 +1512,6 @@ export default function CheckoutPage() {
         </form>
       </div>
       <PaymentStatusOverlay phase={paymentPhase} />
-      <Footer />
     </>
   );
 }

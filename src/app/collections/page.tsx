@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: 'Browse our complete collection of premium handcrafted sarees.',
 };
 
-export const revalidate = 15;
+export const revalidate = 60;
 
 export default async function CollectionsPage() {
   const { products, categories } = await getCachedCollectionsPage().catch(() => ({
@@ -22,10 +22,12 @@ export default async function CollectionsPage() {
   return (
     <>
       <ProductRoutesPrefetch slugs={products.slice(0, 24).map((p) => p.slug)} />
-      <div className="bg-beige py-12">
+      <div className="bg-beige py-6 pattern-mandala sm:py-12">
         <div className="mx-auto max-w-[90rem] px-4 text-center sm:px-6 lg:px-10">
-          <h1 className="font-serif text-3xl tracking-[0.15em] text-charcoal sm:text-4xl">ALL COLLECTIONS</h1>
-          <p className="mt-2 text-muted">Discover our complete range of exquisite sarees</p>
+          <p className="text-xs font-semibold tracking-[0.3em] text-maroon">COLLECTION</p>
+          <h1 className="mt-2 font-serif text-3xl tracking-[0.1em] text-charcoal sm:text-4xl">
+            ALL COLLECTIONS
+          </h1>
         </div>
       </div>
 

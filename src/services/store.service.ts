@@ -142,6 +142,8 @@ export const orderService = {
       amount: number;
       currency: string;
     }>('/orders/checkout', data),
+  abandonCheckout: (orderNumber: string) =>
+    storePost<{ abandoned: boolean }>(`/orders/${orderNumber}/abandon-checkout`),
   getMyOrders: () => apiGet<Order[]>('/orders/mine'),
   validateCoupon: (code: string, subtotal: number, phone?: string, shippingCharge?: number) =>
     storePost<{
@@ -176,6 +178,11 @@ export const orderService = {
     razorpayPaymentId: string;
     razorpaySignature: string;
   }) => storePost<{ orderNumber: string; paymentStatus: string }>('/payments/verify', data),
+  reportPaymentFailed: (orderNumber: string, reason?: string) =>
+    storePost<{ orderNumber: string; paymentStatus: string }>('/payments/failed', {
+      orderNumber,
+      ...(reason ? { reason } : {}),
+    }),
   getPaymentStatus: (orderNumber: string, context?: 'return' | 'poll') =>
     storeGet<{
       status: string;

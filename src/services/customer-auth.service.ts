@@ -12,6 +12,7 @@ export const customerAuthService = {
     apiPost<{
       phone: string;
       expiresInSeconds: number;
+      resendAfterSeconds?: number;
       debugOtp?: string;
       channels?: Array<'whatsapp' | 'sms' | 'debug'>;
     }>('/customer-auth/otp/send', { phone }),

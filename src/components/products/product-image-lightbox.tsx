@@ -219,31 +219,7 @@ export function ProductImageLightbox({
             className="pointer-events-none object-contain"
           />
         </div>
-
-        {images.length > 1 && zoom === MIN_ZOOM ? (
-          <div className="absolute bottom-4 left-1/2 z-10 flex max-w-[80vw] -translate-x-1/2 gap-2 overflow-hidden rounded-full bg-black/40 px-3 py-2 backdrop-blur-sm">
-            {images.map((image, imageIndex) => (
-              <button
-                key={image.id}
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  goTo(imageIndex);
-                }}
-                className={`h-2 rounded-full transition-all ${
-                  imageIndex === index ? 'w-6 bg-white' : 'w-2 bg-white/45 hover:bg-white/75'
-                }`}
-                aria-label={`View image ${imageIndex + 1}`}
-                aria-current={imageIndex === index}
-              />
-            ))}
-          </div>
-        ) : null}
       </div>
-
-      <p className="shrink-0 pb-3 text-center text-xs text-white/60 sm:pb-4">
-        {zoom > MIN_ZOOM ? 'Drag to move · Double-click to reset' : 'Swipe or select a dot · Pinch to zoom'}
-      </p>
     </div>
   );
 }

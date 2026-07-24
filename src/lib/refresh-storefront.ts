@@ -38,6 +38,14 @@ export async function refreshStorefrontAfterBannerChange() {
   }
 }
 
+export async function refreshStorefrontAfterInstagramChange() {
+  try {
+    await revalidateStorefrontSettings();
+  } catch {
+    /* best-effort */
+  }
+}
+
 export async function refreshStorefrontAfterReviewChange(productId?: string) {
   try {
     await revalidateStorefrontReviews(productId);

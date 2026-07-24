@@ -16,6 +16,7 @@ import type {
   ProductImage,
   Coupon,
   HeroBanner,
+  InstagramReel,
   CustomerReview,
   Category,
   StoreCustomer,
@@ -32,6 +33,12 @@ import type {
 export const adminAuthService = {
   login: (email: string, password: string) =>
     apiPost<{ admin: Admin }>("/auth/login", { email, password }),
+  changePassword: (data: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) =>
+    apiPost<{ emailSent: boolean; email: string }>("/auth/change-password", data),
   logout: () => apiPost("/auth/logout"),
   me: () => apiGet<{ admin: Admin }>("/auth/me"),
 };
@@ -342,6 +349,19 @@ export const adminBannerService = {
   update: (id: string, data: Record<string, unknown>) =>
     apiPut<HeroBanner>(`/hero-banners/${id}`, data),
   delete: (id: string) => apiDelete(`/hero-banners/${id}`),
+};
+
+export const adminInstagramReelService = {
+  getAll: () => apiGet<InstagramReel[]>("/instagram/reels/all"),
+  create: (data: { videoUrl: string; sortOrder?: number; isActive?: boolean }) =>
+    apiPost<InstagramReel>("/instagram/reels", data),
+  update: (
+    id: string,
+    data: { videoUrl?: string; sortOrder?: number; isActive?: boolean },
+  ) => apiPut<InstagramReel>(`/instagram/reels/${id}`, data),
+  reorder: (orderedIds: string[]) =>
+    apiPut<InstagramReel[]>("/instagram/reels/reorder", { orderedIds }),
+  delete: (id: string) => apiDelete(`/instagram/reels/${id}`),
 };
 
 export const adminReviewService = {

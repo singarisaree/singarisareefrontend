@@ -8,16 +8,20 @@ import { adminSettingsService } from "@/services/admin.service";
 import { HeroBannersSettings } from "@/components/admin/hero-banners-settings";
 import { InvoiceSignaturePad } from "@/components/admin/invoice-signature-pad";
 import { WhatsAppTemplateSettings } from "@/components/admin/whatsapp-template-settings";
+import { AdminPasswordSettings } from "@/components/admin/admin-password-settings";
+import { InstagramVideosSettings } from "@/components/admin/instagram-videos-settings";
 import { refreshStorefrontAfterSettingsChange } from "@/lib/refresh-storefront";
 
 const SETTINGS_TABS = [
   { id: "hero-banners", label: "Hero Banners" },
+  { id: "instagram-videos", label: "Instagram Videos" },
   { id: "our-story", label: "Our Story" },
   { id: "announcement", label: "Announcement" },
   { id: "shipping", label: "Shipping" },
   { id: "quick-pickup", label: "Quick Delivery" },
   { id: "whatsapp-templates", label: "WhatsApp Templates" },
   { id: "signature", label: "Signature" },
+  { id: "password", label: "Password" },
 ] as const;
 
 type SettingsTab = (typeof SETTINGS_TABS)[number]["id"];
@@ -403,8 +407,8 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold text-[#0f172a]">Settings</h1>
         <p className="mt-1 text-sm text-[#64748b]">
-          Manage storefront content, shipping rules, WhatsApp templates, and
-          invoice settings.
+          Manage storefront content, shipping rules, WhatsApp templates,
+          invoice settings, and admin password.
         </p>
       </div>
 
@@ -426,6 +430,8 @@ export default function AdminSettingsPage() {
       </nav>
 
       {activeTab === "hero-banners" && <HeroBannersSettings />}
+
+      {activeTab === "instagram-videos" && <InstagramVideosSettings />}
 
       {activeTab === "whatsapp-templates" && <WhatsAppTemplateSettings />}
 
@@ -914,6 +920,8 @@ export default function AdminSettingsPage() {
           />
         </section>
       )}
+
+      {activeTab === "password" && <AdminPasswordSettings />}
     </div>
   );
 }

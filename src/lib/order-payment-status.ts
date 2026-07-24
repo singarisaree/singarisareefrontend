@@ -60,7 +60,11 @@ export function isOrderPaymentSuccess(data: OrderPaymentStatus) {
 export function isOrderPaymentFailed(data: OrderPaymentStatus) {
   if (data.paymentStatus === 'SUCCESS') return false;
   if (SUCCESS_STATUSES.has(data.status)) return false;
-  return data.status === 'FAILED' || data.paymentStatus === 'FAILED';
+  return (
+    data.status === 'FAILED' ||
+    data.status === 'CANCELLED' ||
+    data.paymentStatus === 'FAILED'
+  );
 }
 
 export function isOrderPaymentPending(data: OrderPaymentStatus) {
@@ -69,8 +73,8 @@ export function isOrderPaymentPending(data: OrderPaymentStatus) {
 }
 
 function paymentStatusPollInterval(data: OrderPaymentStatus | undefined, fast: boolean) {
-  if (!data) return fast ? 400 : 2000;
-  return isOrderPaymentPending(data) ? (fast ? 400 : 2000) : false;
+  if (!data) return fast ? 250 : 1500;
+  return isOrderPaymentPending(data) ? (fast ? 250 : 1500) : false;
 }
 
 export function orderPaymentStatusQueryOptions(

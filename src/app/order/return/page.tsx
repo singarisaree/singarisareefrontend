@@ -2,55 +2,31 @@
 
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Footer } from '@/components/layout/footer';
+import { orderPaymentResultHref } from '@/lib/order-payment-routes';
+import {
+  OrderPaymentLoading,
+  OrderPaymentMissing,
+} from '@/components/orders/order-payment-result';
 
-/** Legacy Razorpay return URL — forwards to the unified order status page. */
+/** Legacy Razorpay return URL — forwards to pending confirmation. */
 function ReturnContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('order_id');
 
   useEffect(() => {
-    if (orderId) {
-      router.replace(`/order/success?order_id=${encodeURIComponent(orderId)}`);
-    }
+    if (!orderId) return;
+    router.replace(orderPaymentResultHref(orderId, 'pending'));
   }, [orderId, router]);
 
-  if (!orderId) {
-    return (
-      <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
-        <p className="text-brown-light">Order not found.</p>
-        <Link href="/" className="mt-4 inline-block">
-          <Button variant="outline">Return home</Button>
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto max-w-lg px-4 py-20 text-center sm:px-6">
-      <Loader2 className="mx-auto h-10 w-10 animate-spin text-gold" />
-      <p className="mt-4 text-brown-light">Confirming your payment…</p>
-    </div>
-  );
+  if (!orderId) return <OrderPaymentMissing />;
+  return <OrderPaymentLoading />;
 }
 
 export default function OrderReturnPage() {
   return (
-    <>
-      <Suspense
-        fallback={
-          <div className="py-20 text-center">
-            <Loader2 className="mx-auto h-10 w-10 animate-spin text-gold" />
-          </div>
-        }
-      >
-        <ReturnContent />
-      </Suspense>
-      <Footer />
-    </>
+    <Suspense fallback={<OrderPaymentLoading />}>
+      <ReturnContent />
+    </Suspense>
   );
 }

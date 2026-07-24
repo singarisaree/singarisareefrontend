@@ -54,22 +54,59 @@ function RefundTrackingBlock({
   const details = getRefundTrackingDetails(order);
   const textClass = isAdmin ? 'text-[#64748b]' : 'text-brown-light';
   const labelClass = isAdmin ? 'font-medium text-[#0f172a]' : 'font-medium text-charcoal';
+  const [copied, setCopied] = useState(false);
+
+  const copyCouponCode = async () => {
+    if (!details.couponCode) return;
+    try {
+      await navigator.clipboard.writeText(details.couponCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  if (!details.couponCode && details.refundAmount == null && details.deduction == null) {
+    return null;
+  }
 
   return (
-    <div className={cn('mt-1.5 space-y-0.5 text-xs', textClass)}>
+    <div
+      className={cn(
+        'mt-1.5 space-y-1.5 rounded-md border px-2.5 py-2 text-xs',
+        isAdmin ? 'border-[#e2e8f0] bg-[#f8fafc]' : 'border-beige bg-white',
+        textClass,
+      )}
+    >
       {details.couponCode && (
+        <div className="flex items-center justify-between gap-2">
+          <p>
+            Coupon code:{' '}
+            <span className={cn('font-mono tracking-wide', labelClass)}>
+              {details.couponCode}
+            </span>
+          </p>
+          {!isAdmin && (
+            <button
+              type="button"
+              onClick={() => void copyCouponCode()}
+              className="shrink-0 rounded border border-beige px-2 py-0.5 text-[11px] font-medium text-maroon hover:bg-beige/40"
+            >
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          )}
+        </div>
+      )}
+      {details.refundAmount != null && details.refundAmount > 0 && (
         <p>
-          Coupon: <span className={labelClass}>{details.couponCode}</span>
+          Coupon amount: <span className={labelClass}>{formatPrice(details.refundAmount)}</span>
         </p>
       )}
       {details.deduction != null && details.deduction > 0 && (
         <p>
-          Deduction: <span className={labelClass}>{formatPrice(details.deduction)}</span>
-        </p>
-      )}
-      {details.refundAmount != null && details.refundAmount > 0 && (
-        <p>
-          Coupon Amount: <span className={labelClass}>{formatPrice(details.refundAmount)}</span>
+          Shipping deduction:{' '}
+          <span className={labelClass}>{formatPrice(details.deduction)}</span>
         </p>
       )}
     </div>

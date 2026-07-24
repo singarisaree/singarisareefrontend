@@ -69,13 +69,10 @@ export default async function CategoryPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbsLd) }}
       />
       <ProductRoutesPrefetch slugs={products.slice(0, 12).map((p) => p.slug)} />
-      <div className="bg-beige py-12 pattern-mandala">
+      <div className="bg-beige py-6 pattern-mandala sm:py-12">
         <div className="mx-auto max-w-[90rem] px-4 text-center sm:px-6 lg:px-10">
           <p className="text-xs font-semibold tracking-[0.3em] text-maroon">COLLECTION</p>
           <h1 className="mt-2 font-serif text-3xl tracking-[0.1em] text-charcoal sm:text-4xl">{category.name}</h1>
-          {category.description && (
-            <p className="mt-3 max-w-2xl mx-auto text-muted">{category.description}</p>
-          )}
         </div>
       </div>
 

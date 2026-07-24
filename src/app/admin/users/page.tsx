@@ -462,6 +462,12 @@ export default function AdminUsersPage() {
                 </Link>
                 . Pick one, then edit heading, story, and link.
               </p>
+              <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <span className="font-semibold">“Sent” means Meta accepted the API call</span> — not
+                that every phone received it. Check Meta WhatsApp Manager → Insights / Message
+                logs for delivery. Webhook must be configured for this site to show Delivered /
+                Failed after send.
+              </p>
               {marketingWhatsAppTemplates.length === 0 ? (
                 <p className="mt-4 text-sm text-amber-700">
                   No marketing templates found. Configure text and image marketing templates in Settings.
@@ -508,6 +514,9 @@ export default function AdminUsersPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[#334155]">
                   Image {selectedTemplateKind === 'marketing_image' ? '(required)' : '(optional)'}
+                  <span className="mt-0.5 block text-xs font-normal text-[#94a3b8]">
+                    JPG/PNG preferred. We convert uploads for WhatsApp (WebP is not supported by Meta).
+                  </span>
                 </label>
                 <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[#cbd5e1] px-4 py-3 text-sm text-[#475569] hover:bg-[#f8fafc]">
                   {imageUploading ? (
@@ -650,10 +659,23 @@ export default function AdminUsersPage() {
                       <a href={campaign.campaignLink} target="_blank" rel="noreferrer" className="mt-1 block break-all text-xs text-blue-600 underline">{campaign.campaignLink}</a>
                     )}
                     <p className="mt-2 text-sm text-[#334155]">
-                      Sent: <span className="font-semibold text-green-600">{campaign.sentCount}</span>
-                      {' · '}Failed: <span className="font-semibold text-red-500">{campaign.failedCount}</span>
+                      Accepted by Meta:{' '}
+                      <span className="font-semibold text-green-600">{campaign.sentCount}</span>
+                      {' · '}Delivered:{' '}
+                      <span className="font-semibold text-[#0f172a]">
+                        {campaign.deliveredCount ?? 0}
+                      </span>
+                      {' · '}Failed:{' '}
+                      <span className="font-semibold text-red-500">{campaign.failedCount}</span>
                       {' · '}Recipients: {campaign.recipientCount}
                     </p>
+                    {(campaign.recentErrors?.length ?? 0) > 0 ? (
+                      <ul className="mt-2 space-y-1 text-xs text-red-600">
+                        {campaign.recentErrors!.map((error) => (
+                          <li key={error}>{error}</li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                 ))
               )}
@@ -716,10 +738,21 @@ export default function AdminUsersPage() {
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-medium text-[#0f172a]">{message.campaignHeading}</p>
                           <StatusBadge variant={marketingMessageVariant(message.status)}>
-                            {message.status === 'SENT' ? 'Sent' : message.status === 'FAILED' ? 'Failed' : 'Skipped'}
+                            {message.failedAt || message.status === 'FAILED'
+                              ? 'Failed'
+                              : message.deliveredAt
+                                ? 'Delivered'
+                                : message.status === 'SENT'
+                                  ? 'Accepted'
+                                  : 'Skipped'}
                           </StatusBadge>
                         </div>
                         <p className="mt-1 text-xs text-[#64748b]">{formatDate(message.createdAt)}</p>
+                        {message.deliveredAt ? (
+                          <p className="mt-1 text-xs text-green-700">
+                            Delivered {formatDate(message.deliveredAt)}
+                          </p>
+                        ) : null}
                         {message.errorMessage && (
                           <p className="mt-2 text-xs text-red-500">{message.errorMessage}</p>
                         )}

@@ -1,9 +1,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Mail, Clock } from 'lucide-react';
-import { FaInstagram, FaFacebook, FaYoutube, FaWhatsapp } from 'react-icons/fa';
+import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
 import { BrandLogo } from '@/components/layout/brand-logo';
 import { STORE_CONTACT } from '@/lib/store-contact';
+
+const DEFAULT_INSTAGRAM_URL =
+  'https://www.instagram.com/sareeby_singari?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==';
 
 interface FooterProps {
   settings?: {
@@ -20,6 +23,7 @@ interface FooterProps {
 export function Footer({ settings }: FooterProps) {
   const email = settings?.store_email || STORE_CONTACT.email;
   const whatsappUrl = 'https://wa.me/919490458789';
+  const instagramUrl = settings?.instagram_url || DEFAULT_INSTAGRAM_URL;
 
   return (
     <footer className="bg-charcoal-dark text-white">
@@ -33,31 +37,13 @@ export function Footer({ settings }: FooterProps) {
             </p>
             <div className="mt-5 flex gap-4">
               <a
-                href={settings?.instagram_url || '#'}
+                href={instagramUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
                 className="text-white/50 transition-colors hover:text-gold"
               >
                 <FaInstagram className="h-5 w-5" />
-              </a>
-              <a
-                href={settings?.facebook_url || '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-                className="text-white/50 transition-colors hover:text-gold"
-              >
-                <FaFacebook className="h-5 w-5" />
-              </a>
-              <a
-                href={settings?.youtube_url || settings?.instagram_url || 'https://www.youtube.com'}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="YouTube"
-                className="text-white/50 transition-colors hover:text-gold"
-              >
-                <FaYoutube className="h-5 w-5" />
               </a>
               <a
                 href={whatsappUrl}

@@ -23,7 +23,6 @@ import {
   AdminDetailShell,
   AdminFormCheckbox,
   AdminFormField,
-  AdminFormTextarea,
 } from '@/components/admin/admin-detail';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -35,7 +34,6 @@ export default function AdminCategoryDetailPage({ params }: { params: Promise<{ 
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [sortOrder, setSortOrder] = useState('0');
   const [isActive, setIsActive] = useState(true);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -49,7 +47,6 @@ export default function AdminCategoryDetailPage({ params }: { params: Promise<{ 
   useEffect(() => {
     if (category) {
       setName(category.name);
-      setDescription(category.description || '');
       setSortOrder(String(category.sortOrder));
       setIsActive(category.isActive);
     }
@@ -59,7 +56,6 @@ export default function AdminCategoryDetailPage({ params }: { params: Promise<{ 
     mutationFn: () =>
       adminCategoryService.update(id, {
         name: name.trim(),
-        description: description.trim() || undefined,
         sortOrder: Number(sortOrder),
         isActive,
       }),
@@ -206,7 +202,6 @@ export default function AdminCategoryDetailPage({ params }: { params: Promise<{ 
           <AdminDetailSection title="Category Details">
             <div className="space-y-4">
               <AdminFormField label="Category Name" value={name} onChange={setName} />
-              <AdminFormTextarea label="Description" value={description} onChange={setDescription} rows={4} />
               <div className="grid gap-4 sm:grid-cols-2">
                 <AdminFormField label="Sort Order" value={sortOrder} onChange={setSortOrder} type="number" />
                 <div className="flex items-end">

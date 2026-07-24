@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight, RotateCcw, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/layout/footer';
 import { OrderTrackingTimeline } from '@/components/orders/order-tracking-timeline';
+import { StoreCreditCouponCard } from '@/components/orders/store-credit-coupon-card';
 import { shouldHideOrderTracking } from '@/components/orders/order-payment-status-notice';
 import { getCustomerFacingOrderStatus } from '@/lib/order-return';
 import { ReturnRequestSection } from '@/components/orders/return-request-section';
@@ -486,6 +487,10 @@ export default function MyOrdersPage() {
                             </div>
                           </div>
                         </div>
+
+                        {order.refundCouponCode ? (
+                          <StoreCreditCouponCard order={order} />
+                        ) : null}
 
                         {order.shipping?.trackingUrl && (
                           <a

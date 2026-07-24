@@ -24,6 +24,7 @@ export interface ProductColor {
   id: string;
   name: string;
   hexCode?: string;
+  instagramVideoUrl?: string | null;
   sortOrder: number;
   isActive: boolean;
   images: ProductImage[];
@@ -100,6 +101,15 @@ export interface InstagramFeed {
   imageUrl: string;
   caption?: string;
   linkUrl?: string;
+}
+
+export interface InstagramReel {
+  id: string;
+  videoUrl: string;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface CartItem {
@@ -505,6 +515,9 @@ export interface StoreCustomer {
     status: 'SENT' | 'FAILED' | 'SKIPPED';
     errorMessage?: string | null;
     createdAt: string;
+    acceptedAt?: string | null;
+    deliveredAt?: string | null;
+    failedAt?: string | null;
     campaignHeading: string;
     templateKey: string;
   }>;
@@ -542,6 +555,10 @@ export interface MarketingCampaign {
   recipientCount: number;
   sentCount: number;
   failedCount: number;
+  /** Count of messages Meta marked delivered (needs webhook). */
+  deliveredCount?: number;
+  failedAfterAccept?: number;
+  recentErrors?: string[];
   createdAt: string;
   createdByAdmin?: { name: string } | null;
 }

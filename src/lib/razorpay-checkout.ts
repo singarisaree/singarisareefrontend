@@ -113,8 +113,8 @@ function normalizePhone(phone?: string) {
 }
 
 /**
- * Opens Razorpay Checkout, verifies payment on the server, then resolves.
- * Callers should show UI overlays via onVerifying / result handling.
+ * Opens Razorpay Checkout and resolves as soon as Razorpay reports an outcome.
+ * Payment verification runs in the background so navigation is not blocked.
  */
 export async function openRazorpayCheckout(
   input: OpenRazorpayCheckoutInput,
@@ -156,8 +156,8 @@ export async function openRazorpayCheckout(
       retry: { enabled: false },
       remember_customer: false,
       modal: {
-        animation: true,
-        confirm_close: true,
+        animation: false,
+        confirm_close: false,
         ondismiss: () => {
           if (settled) return;
           input.onDismiss?.();
@@ -169,6 +169,7 @@ export async function openRazorpayCheckout(
         settled = true;
         input.onVerifying?.();
 
+        // Navigate immediately; status pages confirm via polling.
         void orderService
           .verifyPayment({
             orderNumber: input.orderNumber,
@@ -176,14 +177,10 @@ export async function openRazorpayCheckout(
             razorpayPaymentId: response.razorpay_payment_id,
             razorpaySignature: response.razorpay_signature,
           })
-          .then(async () => {
-            await input.onSuccess?.();
-            finish({ status: 'paid' });
-          })
-          .catch(() => {
-            // Payment may have succeeded — let the status page poll and confirm.
-            finish({ status: 'verify_pending' });
-          });
+          .then(() => input.onSuccess?.())
+          .catch(() => undefined);
+
+        finish({ status: 'paid' });
       },
     });
 

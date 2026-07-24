@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -56,7 +56,6 @@ export default function AdminRefundsPage() {
   const [selectedOrder, setSelectedOrder] =
     useState<RefundEligibleOrder | null>(null);
   const [deduction, setDeduction] = useState("0");
-  const [couponAmount, setCouponAmount] = useState("");
   const [issuedCouponCode, setIssuedCouponCode] = useState<string | null>(null);
   const { page, setPage, pageSize, setPageSize, resetPage } =
     useAdminPagination();
@@ -94,19 +93,20 @@ export default function AdminRefundsPage() {
   const meta = data?.meta;
   const showSkeleton = isLoading && orders.length === 0;
 
-  const maxCouponAmount = useMemo(() => {
-    if (!selectedOrder) return 0;
-    const eligible = selectedOrder.eligibleAmount ?? selectedOrder.grandTotal;
-    const deduct = Math.max(0, Number(deduction) || 0);
-    return Math.max(0, eligible - deduct);
-  }, [selectedOrder, deduction]);
-
   const processMutation = useMutation({
     mutationFn: () => {
       if (!selectedOrder) throw new Error("No order selected");
+      const eligible = selectedOrder.eligibleAmount ?? selectedOrder.grandTotal;
+      const isCancellation = selectedOrder.refundType === "CANCELLATION";
+      const deduct = isCancellation
+        ? 0
+        : Math.max(0, Number(deduction) || 0);
+      const amount = isCancellation
+        ? eligible
+        : Math.max(0, eligible - deduct);
       return adminRefundService.process(selectedOrder.id, {
-        deduction: Math.max(0, Number(deduction) || 0),
-        couponAmount: Number(couponAmount),
+        deduction: deduct,
+        couponAmount: amount,
       });
     },
     onSuccess: (result) => {
@@ -124,17 +124,13 @@ export default function AdminRefundsPage() {
 
   const openRefundModal = (order: RefundEligibleOrder) => {
     setSelectedOrder(order);
-    const eligible = order.eligibleAmount ?? order.grandTotal;
-    // Default to full eligible credit; admin can opt to deduct shipping.
     setDeduction("0");
-    setCouponAmount(String(Math.max(0, eligible)));
     setIssuedCouponCode(null);
   };
 
   const closeModal = () => {
     setSelectedOrder(null);
     setDeduction("0");
-    setCouponAmount("");
     setIssuedCouponCode(null);
   };
 
@@ -143,8 +139,8 @@ export default function AdminRefundsPage() {
       <div>
         <h1 className="text-2xl font-bold text-[#0f172a]">Coupon refunds</h1>
         <p className="mt-1 text-sm text-[#64748b]">
-          Issue phone-linked store credit coupons for cancelled, returned, or
-          RTO orders (no cash refunds)
+          Issue phone-linked store credit coupons for cancelled or returned paid
+          orders (no cash refunds)
         </p>
       </div>
 
@@ -403,25 +399,12 @@ export default function AdminRefundsPage() {
                   {(() => {
                     const eligible =
                       selectedOrder.eligibleAmount ?? selectedOrder.grandTotal;
-                    const shippingCharge = Math.max(
-                      0,
-                      Number(selectedOrder.shippingCharge) || 0,
-                    );
-                    const shippingDeductOption = Math.min(
-                      eligible,
-                      shippingCharge,
-                    );
-                    const deductValue = Math.max(0, Number(deduction) || 0);
-                    const applyShipping = deductValue > 0 && shippingCharge > 0;
-
-                    const setRefundAmounts = (nextDeduction: number) => {
-                      const capped = Math.min(
-                        eligible,
-                        Math.max(0, nextDeduction),
-                      );
-                      setDeduction(String(capped));
-                      setCouponAmount(String(Math.max(0, eligible - capped)));
-                    };
+                    const isCancellation =
+                      selectedOrder.refundType === "CANCELLATION";
+                    const deductValue = isCancellation
+                      ? 0
+                      : Math.max(0, Number(deduction) || 0);
+                    const creditAmount = Math.max(0, eligible - deductValue);
 
                     return (
                       <>
@@ -441,7 +424,7 @@ export default function AdminRefundsPage() {
                                 Shipping deducted
                               </dt>
                               <dd className="font-medium text-[#0f172a]">
-                                {applyShipping
+                                {deductValue > 0
                                   ? `− ${formatPrice(deductValue)}`
                                   : formatPrice(0)}
                               </dd>
@@ -451,86 +434,35 @@ export default function AdminRefundsPage() {
                                 Store credit coupon
                               </dt>
                               <dd className="text-base font-bold text-[#0f172a]">
-                                {formatPrice(Number(couponAmount) || 0)}
+                                {formatPrice(creditAmount)}
                               </dd>
                             </div>
                           </dl>
                         </div>
 
-                        {shippingCharge > 0 ? (
+                        {isCancellation ? null : (
                           <div>
-                            <Label>Shipping charge</Label>
-                            <p className="mt-1 text-xs text-[#64748b]">
-                              Order shipping was {formatPrice(shippingCharge)}.
-                              Choose whether to keep it in the coupon or deduct
-                              it.
-                            </p>
-                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                              {[
-                                {
-                                  label: "Keep full amount",
-                                  hint: "No shipping deducted",
-                                  value: 0,
-                                },
-                                {
-                                  label: "Deduct shipping",
-                                  hint: `Minus ${formatPrice(shippingDeductOption)}`,
-                                  value: shippingDeductOption,
-                                },
-                              ].map((option) => (
-                                <button
-                                  key={option.label}
-                                  type="button"
-                                  onClick={() => setRefundAmounts(option.value)}
-                                  className={`rounded-lg border px-3 py-2.5 text-left ${
-                                    Number(deduction) === option.value
-                                      ? "border-[#0f172a] bg-[#0f172a] text-white"
-                                      : "border-[#e2e8f0] bg-white text-[#475569] hover:bg-[#f8fafc]"
-                                  }`}
-                                >
-                                  <span className="block text-sm font-semibold">
-                                    {option.label}
-                                  </span>
-                                  <span
-                                    className={`mt-0.5 block text-xs ${
-                                      Number(deduction) === option.value
-                                        ? "text-white/70"
-                                        : "text-[#94a3b8]"
-                                    }`}
-                                  >
-                                    {option.hint}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
+                            <Label htmlFor="shippingDeduction">
+                              Shipping deduction
+                            </Label>
+                            <Input
+                              id="shippingDeduction"
+                              type="number"
+                              min={0}
+                              max={eligible}
+                              step="1"
+                              value={deduction}
+                              onChange={(e) => {
+                                const next = Math.min(
+                                  eligible,
+                                  Math.max(0, Number(e.target.value) || 0),
+                                );
+                                setDeduction(String(next));
+                              }}
+                              className="mt-1.5"
+                            />
                           </div>
-                        ) : (
-                          <p className="rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 text-xs text-[#64748b]">
-                            No shipping charge on this order — full eligible
-                            amount can be issued as store credit.
-                          </p>
                         )}
-
-                        <div>
-                          <Label htmlFor="couponAmount">
-                            Adjust coupon amount (optional)
-                          </Label>
-                          <Input
-                            id="couponAmount"
-                            type="number"
-                            min={1}
-                            max={maxCouponAmount}
-                            step="1"
-                            value={couponAmount}
-                            onChange={(e) => setCouponAmount(e.target.value)}
-                            className="mt-1.5"
-                          />
-                          <p className="mt-1 text-xs text-[#64748b]">
-                            You can issue up to {formatPrice(maxCouponAmount)}.
-                            Leave as calculated unless you need a smaller
-                            credit.
-                          </p>
-                        </div>
                       </>
                     );
                   })()}
@@ -545,8 +477,15 @@ export default function AdminRefundsPage() {
                     variant="gold"
                     disabled={
                       processMutation.isPending ||
-                      !couponAmount ||
-                      Number(couponAmount) <= 0
+                      (selectedOrder.refundType === "CANCELLATION"
+                        ? (selectedOrder.eligibleAmount ??
+                            selectedOrder.grandTotal) <= 0
+                        : Math.max(
+                            0,
+                            (selectedOrder.eligibleAmount ??
+                              selectedOrder.grandTotal) -
+                              (Number(deduction) || 0),
+                          ) <= 0)
                     }
                     onClick={() => processMutation.mutate()}
                   >

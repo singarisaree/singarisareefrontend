@@ -66,13 +66,14 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
   const [productStatus, setProductStatus] = useState<'available' | 'coming_soon' | 'out_of_stock' | 'hidden'>('available');
   const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
   const [variantDrafts, setVariantDrafts] = useState<
-    Record<string, { name: string; hexCode: string; isActive: boolean }>
+    Record<string, { name: string; hexCode: string; instagramVideoUrl: string; isActive: boolean }>
   >({});
   const [imageLists, setImageLists] = useState<Record<string, ColorImageEntry[]>>({});
   const [showAddVariant, setShowAddVariant] = useState(false);
   const [newVariant, setNewVariant] = useState({
     name: '',
     hexCode: '#000000',
+    instagramVideoUrl: '',
     stock: '0',
     isActive: true,
   });
@@ -191,6 +192,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
         JSON.stringify({
           name: newVariant.name.trim(),
           hexCode: newVariant.hexCode || undefined,
+          instagramVideoUrl: newVariant.instagramVideoUrl.trim() || undefined,
           stock: Number(newVariant.stock) || 0,
           isActive: newVariant.isActive,
           sortOrder: product?.colors.length ?? 0,
@@ -206,7 +208,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
       void queryClient.invalidateQueries({ queryKey: ['admin-inventory'] });
       void refreshStorefrontAfterProductChange(updated.slug);
       newVariantImages.forEach((img) => URL.revokeObjectURL(img.previewUrl));
-      setNewVariant({ name: '', hexCode: '#000000', stock: '0', isActive: true });
+      setNewVariant({ name: '', hexCode: '#000000', instagramVideoUrl: '', stock: '0', isActive: true });
       setNewVariantImages([]);
       setShowAddVariant(false);
     },
@@ -217,6 +219,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
     variantDrafts[color.id] ?? {
       name: color.name,
       hexCode: color.hexCode || '#000000',
+      instagramVideoUrl: color.instagramVideoUrl || '',
       isActive: color.isActive ?? true,
     };
 
@@ -226,6 +229,7 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
     return (
       draft.name.trim() !== color.name ||
       draft.hexCode !== (color.hexCode || '#000000') ||
+      draft.instagramVideoUrl.trim() !== (color.instagramVideoUrl || '') ||
       draft.isActive !== (color.isActive ?? true)
     );
   };
@@ -351,6 +355,8 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
       if (variantHasChanges(color)) {
         entry.name = draft.name.trim();
         entry.hexCode = draft.hexCode || undefined;
+        // Empty string/null clears the optional Instagram link
+        entry.instagramVideoUrl = draft.instagramVideoUrl.trim() || null;
         entry.isActive = draft.isActive;
       }
       if (stockHasChanges(color)) {
@@ -603,12 +609,30 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
                       onChange={(e) => setNewVariant((v) => ({ ...v, stock: e.target.value }))}
                       className="h-10 w-full rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm focus:border-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
                     />
-                  </div>
-                  <div className="flex items-end">
-                    <label className="flex h-10 cursor-pointer items-center gap-2 text-sm text-[#334155]">
-                      <input
-                        type="checkbox"
-                        checked={newVariant.isActive}
+                        </div>
+
+                        <div className="space-y-1 sm:col-span-2">
+                          <label className="text-xs font-medium text-[#64748b]">
+                            Instagram video link (optional)
+                          </label>
+                          <input
+                            type="text"
+                            inputMode="url"
+                            value={newVariant.instagramVideoUrl}
+                            onChange={(e) =>
+                              setNewVariant((v) => ({ ...v, instagramVideoUrl: e.target.value }))
+                            }
+                            placeholder="https://www.instagram.com/reel/..."
+                            className="h-10 w-full rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm focus:border-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
+                          />
+                          <p className="text-[11px] text-[#94a3b8]">Leave blank if not needed.</p>
+                        </div>
+
+                        <div className="flex items-end">
+                          <label className="flex h-10 cursor-pointer items-center gap-2 text-sm text-[#334155]">
+                            <input
+                              type="checkbox"
+                              checked={newVariant.isActive}
                         onChange={(e) => setNewVariant((v) => ({ ...v, isActive: e.target.checked }))}
                         className="h-4 w-4 rounded border-[#cbd5e1]"
                       />
@@ -731,6 +755,29 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
                               className="h-8 w-full rounded border border-[#e2e8f0] px-2 text-xs font-mono focus:border-[#0f172a] focus:outline-none"
                             />
                           </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-[#64748b]">
+                            Instagram video link (optional)
+                          </label>
+                          <input
+                            type="text"
+                            inputMode="url"
+                            value={draft.instagramVideoUrl}
+                            onChange={(e) =>
+                              setVariantDrafts((prev) => ({
+                                ...prev,
+                                [color.id]: { ...draft, instagramVideoUrl: e.target.value },
+                              }))
+                            }
+                            placeholder="https://www.instagram.com/reel/..."
+                            className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 text-sm focus:border-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
+                          />
+                          <p className="text-[11px] text-[#94a3b8]">
+                            Optional. Leave blank if not needed. When set, customers see “Click here
+                            to watch on Instagram” for this variant.
+                          </p>
                         </div>
 
                         <label className="flex cursor-pointer items-center gap-2 text-sm text-[#334155]">

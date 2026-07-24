@@ -44,7 +44,6 @@ export default function AdminCategoriesPage() {
   const { dateRange, onDateRangeChange, dateParams, hasDateRange, clearDateRange } = useAdminDateRangeParam();
   const { page, setPage, pageSize, setPageSize, resetPage } = useAdminPagination();
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -77,7 +76,6 @@ export default function AdminCategoriesPage() {
     mutationFn: async () => {
       const created = await adminCategoryService.create({
         name: name.trim(),
-        description: description.trim() || undefined,
         isActive: true,
       });
       if (imageFile) {
@@ -89,7 +87,6 @@ export default function AdminCategoriesPage() {
       toast.success('Category added');
       void refreshStorefrontAfterCategoryChange(created.slug);
       setName('');
-      setDescription('');
       setImageFile(null);
       if (imagePreview) URL.revokeObjectURL(imagePreview);
       setImagePreview(null);
@@ -143,22 +140,13 @@ export default function AdminCategoriesPage() {
 
       <AdminTableCard className="p-5">
         <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
-            <input
-              type="text"
-              placeholder="Category name *"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-10 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#0f172a] focus:outline-none"
-            />
-            <input
-              type="text"
-              placeholder="Description (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="h-10 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#0f172a] focus:outline-none"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Category name *"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-10 w-full max-w-md rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm text-[#0f172a] placeholder:text-[#94a3b8] focus:border-[#0f172a] focus:outline-none"
+          />
 
           <div className="flex flex-wrap items-start gap-4">
             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-[#e2e8f0] bg-[#f8fafc]">

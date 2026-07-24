@@ -73,10 +73,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const availableStock = selectedColor?.availableStock ?? 0;
   const hasMultipleImages = galleryImages.length > 1;
   const recentPurchaseCount = Math.max(1, product.displaySoldCount || product.baseSoldCount || 1);
-  const viewingCount = Math.max(
-    3,
-    Math.min(18, Math.round((recentPurchaseCount + Math.max(availableStock, 1)) / 2)),
-  );
+  // Stable per-product count (143–988) so every product page shows a different value.
+  const viewingCount = (() => {
+    const seed = product.id || product.slug || product.name;
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+    }
+    return 143 + (hash % (988 - 143 + 1));
+  })();
   const formattedWeight =
     product.weight != null && product.weight > 0
       ? product.weight >= 1000
@@ -287,6 +292,19 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                 ))}
               </div>
             </div>
+
+            {selectedColor?.instagramVideoUrl ? (
+              <p className="mt-4 text-sm">
+                <a
+                  href={selectedColor.instagramVideoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-maroon underline underline-offset-4 transition-colors hover:text-gold"
+                >
+                  Click here to watch on Instagram
+                </a>
+              </p>
+            ) : null}
 
             {product.fabric && (
               <p className="mt-4 text-sm text-brown-light">

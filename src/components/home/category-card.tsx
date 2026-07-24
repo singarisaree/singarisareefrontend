@@ -22,18 +22,18 @@ export function CategoryCard({ category }: CategoryCardProps) {
     <Link
       href={href}
       prefetch
-      className="group relative block overflow-hidden"
+      className="group relative block overflow-hidden rounded-lg"
       onMouseEnter={warmRoute}
       onFocus={warmRoute}
       onTouchStart={warmRoute}
     >
-      <div className="relative aspect-[3/4] overflow-hidden bg-beige">
+      <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-beige">
         {category.imageUrl ? (
           <Image
             src={category.imageUrl}
             alt={category.name}
             fill
-            sizes="160px"
+            sizes="(max-width: 640px) 48vw, (max-width: 1024px) 11rem, 14rem"
             className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
             loading="lazy"
             quality={80}

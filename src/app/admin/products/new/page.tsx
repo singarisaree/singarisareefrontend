@@ -23,6 +23,7 @@ interface ColorForm {
   id: string;
   name: string;
   hexCode: string;
+  instagramVideoUrl: string;
   stock: string;
   images: ColorFormImage[];
 }
@@ -36,6 +37,7 @@ export default function AdminAddProductPage() {
   const queryClient = useQueryClient();
   const colorsRef = useRef<ColorForm[]>([]);
   const [name, setName] = useState('');
+  const [sku, setSku] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
   const [productDetails, setProductDetails] = useState('');
@@ -43,7 +45,7 @@ export default function AdminAddProductPage() {
   const [price, setPrice] = useState('');
   const [mrp, setMrp] = useState('');
   const [colors, setColors] = useState<ColorForm[]>([
-    { id: crypto.randomUUID(), name: '', hexCode: '#000000', stock: '0', images: [] },
+    { id: crypto.randomUUID(), name: '', hexCode: '#000000', instagramVideoUrl: '', stock: '0', images: [] },
   ]);
   const [weight, setWeight] = useState('');
   const [length, setLength] = useState('');
@@ -69,6 +71,7 @@ export default function AdminAddProductPage() {
         'payload',
         JSON.stringify({
           name: name.trim(),
+          sku: sku.trim(),
           categoryId,
           description: description.trim(),
           productDetails: productDetails.trim() || undefined,
@@ -87,6 +90,7 @@ export default function AdminAddProductPage() {
           colors: colors.map((color, index) => ({
             name: color.name.trim(),
             hexCode: color.hexCode || undefined,
+            instagramVideoUrl: color.instagramVideoUrl.trim() || undefined,
             stock: Number(color.stock) || 0,
             sortOrder: index,
           })),
@@ -107,7 +111,7 @@ export default function AdminAddProductPage() {
   const addColor = () => {
     setColors((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), name: '', hexCode: '#000000', stock: '0', images: [] },
+      { id: crypto.randomUUID(), name: '', hexCode: '#000000', instagramVideoUrl: '', stock: '0', images: [] },
     ]);
   };
 
@@ -200,6 +204,10 @@ export default function AdminAddProductPage() {
       toast.error('Please fill required fields');
       return;
     }
+    if (!/^\d{6}$/.test(sku.trim())) {
+      toast.error('SKU must be exactly 6 digits');
+      return;
+    }
     if (description.trim().length < 10) {
       toast.error('Description must be at least 10 characters');
       return;
@@ -253,6 +261,20 @@ export default function AdminAddProductPage() {
             />
           </div>
           <div className="space-y-2">
+            <label htmlFor="sku" className="text-sm font-medium text-[#334155]">SKU *</label>
+            <input
+              id="sku"
+              inputMode="numeric"
+              pattern="\d{6}"
+              maxLength={6}
+              value={sku}
+              onChange={(e) => setSku(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="6 digits e.g. 482917"
+              className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 font-mono text-sm tracking-wider focus:border-[#0f172a] focus:outline-none"
+            />
+            <p className="text-xs text-[#64748b]">Exactly 6 digits. Must be unique for each product.</p>
+          </div>
+          <div className="space-y-2 md:col-span-2">
             <label htmlFor="categoryId" className="text-sm font-medium text-[#334155]">Category *</label>
             <select
               id="categoryId"
@@ -441,6 +463,20 @@ export default function AdminAddProductPage() {
                       className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 text-sm focus:border-[#0f172a] focus:outline-none"
                     />
                   </div>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <label className="text-xs font-medium text-[#334155]">
+                    Instagram video link (optional)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="url"
+                    value={color.instagramVideoUrl}
+                    onChange={(e) => updateColor(index, 'instagramVideoUrl', e.target.value)}
+                    placeholder="https://www.instagram.com/reel/..."
+                    className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 text-sm focus:border-[#0f172a] focus:outline-none"
+                  />
+                  <p className="text-[11px] text-[#94a3b8]">Leave blank if not needed.</p>
                 </div>
                 <div className="mt-3 space-y-2">
                   <label className="text-xs font-medium text-[#334155]">Images (max {MAX_IMAGES_PER_COLOR})</label>

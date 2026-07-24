@@ -134,6 +134,7 @@ export const serverStore = {
           categories: Category[];
           products: Product[];
           settings: PublicSettings;
+          instagramReels: Array<{ id: string; videoUrl: string; sortOrder: number }>;
         }>('/storefront/homepage'),
       ['storefront-homepage', 'storefront-banners', 'storefront-categories', 'storefront-products', 'storefront-settings'],
     ),

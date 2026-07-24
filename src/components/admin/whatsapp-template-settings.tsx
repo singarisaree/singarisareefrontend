@@ -68,7 +68,13 @@ function errorMessage(error: unknown, fallback: string): string {
         .join("; ");
       if (details) return details;
     }
-    if (response?.message) return response.message;
+    if (response?.message) {
+      const msg = response.message;
+      if (/does not have permission to create message template/i.test(msg)) {
+        return `${msg} This usually applies only to AUTHENTICATION (OTP) templates. Other UTILITY/MARKETING templates can still work. In Meta: verify the business and raise the WhatsApp messaging limit to Tier 1 (2,000+), then retry OTP submit.`;
+      }
+      return msg;
+    }
   }
   return error instanceof Error ? error.message : fallback;
 }
@@ -149,6 +155,7 @@ function validateTemplate(template: WhatsAppTemplateRecord): string | null {
 export function WhatsAppTemplateSettings() {
   const queryClient = useQueryClient();
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const syncingPendingRef = useRef(false);
   const [imageTarget, setImageTarget] =
     useState<WhatsAppTemplateKind>("marketing_image");
   const [templates, setTemplates] = useState<WhatsAppTemplateRecord[]>([]);
@@ -168,6 +175,78 @@ export function WhatsAppTemplateSettings() {
       return currentSnapshot === incomingSnapshot ? current : query.data;
     });
   }, [query.data]);
+
+  // Meta does not push approval status to us — pull it for PENDING templates.
+  const pendingKindsKey = templates
+    .filter(
+      (template) =>
+        template.status === "PENDING" || template.status === "IN_APPEAL",
+    )
+    .map((template) => template.kind)
+    .sort()
+    .join(",");
+
+  useEffect(() => {
+    if (!pendingKindsKey) return;
+    const pendingKinds = pendingKindsKey
+      .split(",")
+      .filter(Boolean) as WhatsAppTemplateKind[];
+    if (pendingKinds.length === 0) return;
+
+    let cancelled = false;
+
+    const syncPending = async () => {
+      if (syncingPendingRef.current || cancelled) return;
+      syncingPendingRef.current = true;
+      try {
+        for (const kind of pendingKinds) {
+          if (cancelled) break;
+          try {
+            const updated = await adminSettingsService.syncWhatsAppTemplate(kind);
+            if (cancelled) break;
+            setTemplates((current) =>
+              current.map((template) =>
+                template.kind === updated.kind ? updated : template,
+              ),
+            );
+            if (updated.status === "APPROVED") {
+              toast.success(
+                `${TITLES[updated.kind] || updated.name} approved by Meta`,
+              );
+            }
+            if (updated.status === "REJECTED") {
+              toast.error(
+                `${TITLES[updated.kind] || updated.name} rejected by Meta`,
+              );
+            }
+          } catch {
+            // Keep PENDING locally; next poll / manual refresh can retry.
+          }
+        }
+        if (!cancelled) {
+          void queryClient.invalidateQueries({
+            queryKey: ["admin-whatsapp-templates"],
+          });
+        }
+      } finally {
+        syncingPendingRef.current = false;
+      }
+    };
+
+    // Sync soon after load, then poll while anything is still pending.
+    const initialTimer = window.setTimeout(() => {
+      void syncPending();
+    }, 800);
+    const pollTimer = window.setInterval(() => {
+      void syncPending();
+    }, 45_000);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(initialTimer);
+      window.clearInterval(pollTimer);
+    };
+  }, [pendingKindsKey, queryClient]);
 
   useEffect(() => {
     if (!openKind) return;
@@ -522,18 +601,31 @@ export function WhatsAppTemplateSettings() {
                   ) : null}
 
                   {template.kind === "customer_login_otp" ? (
-                    <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-                      Customer login OTP is sent on Meta WhatsApp and SMS with
-                      the same code — the customer can enter either message.
-                      Submit this AUTHENTICATION template to Meta, wait for
-                      APPROVED, then Activate. Sent.dm SMS is sent in parallel.
+                    <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+                      <p>
+                        <span className="font-semibold">Why OTP can fail when other templates work:</span>{" "}
+                        Order/marketing templates are UTILITY or MARKETING. Login OTP is{" "}
+                        <span className="font-semibold">AUTHENTICATION</span>, which Meta restricts.
+                        Meta requires a <span className="font-semibold">verified business</span> and
+                        usually messaging limit <span className="font-semibold">Tier 1 (2,000+)</span>{" "}
+                        before AUTHENTICATION templates can be created.
+                      </p>
+                      <p>
+                        <span className="font-semibold">WhatsApp:</span> Submit → wait for APPROVED →
+                        Activate. Meta controls the OTP wording (copy-code button).
+                      </p>
+                      <p>
+                        <span className="font-semibold">SMS:</span> Sent.dm sends the same OTP
+                        separately and does not use this Meta template — login SMS can work even if
+                        WhatsApp OTP is blocked.
+                      </p>
                     </div>
                   ) : null}
 
                   {locked ? (
                     <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
                       {template.status === "PENDING"
-                        ? "This template is under Meta review and cannot be edited or resubmitted."
+                        ? "This template is under Meta review. Status updates automatically every ~45s, or use Refresh Meta status."
                         : `This approved template is ${
                             template.isActive ? "active" : "inactive"
                           }. Use the control below to change whether WhatsApp messages are sent.`}

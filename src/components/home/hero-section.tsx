@@ -95,7 +95,8 @@ export function HeroSection({ banners }: HeroSectionProps) {
                   className="object-cover object-top"
                   unoptimized={shouldUnoptimizeStorefrontImage(mobileImage)}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-cream via-cream/35 to-cream/5" />
+                {/* Light wash only — keep image bright on mobile */}
+                <div className="absolute inset-0 bg-cream/10" />
               </div>
             ) : null}
             {desktopImage ? (
