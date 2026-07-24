@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { Eye, EyeOff } from 'lucide-react';
 import { adminAuthService } from '@/services/admin.service';
 import { getApiErrorMessage, getConnectionErrorMessage, isConnectionError } from '@/lib/api-error';
 import { reconnectRealtimeSocket } from '@/lib/socket-client';
@@ -19,6 +20,7 @@ const loginSchema = z.object({
 export default function AdminLoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(loginSchema),
@@ -68,12 +70,23 @@ export default function AdminLoginPage() {
           </div>
           <div>
             <label htmlFor="password" className="text-sm font-medium text-[#334155]">Password</label>
-            <input
-              id="password"
-              type="password"
-              {...register('password')}
-              className="mt-1.5 h-11 w-full rounded-lg border border-[#e2e8f0] px-4 text-sm focus:border-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
-            />
+            <div className="relative mt-1.5">
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                {...register('password')}
+                className="h-11 w-full rounded-lg border border-[#e2e8f0] px-4 pr-11 text-sm focus:border-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-[#64748b] hover:text-[#0f172a]"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password.message as string}</p>}
           </div>
           <button

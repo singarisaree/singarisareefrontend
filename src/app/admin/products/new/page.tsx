@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { getApiErrorMessage } from '@/lib/api-error';
 import type { Category } from '@/types';
@@ -240,6 +240,13 @@ export default function AdminAddProductPage() {
   return (
     <div className="w-full space-y-6">
       <div>
+        <Link
+          href="/admin/products"
+          className="mb-3 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-[#64748b] transition-colors hover:text-[#0f172a]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to products
+        </Link>
         <h1 className="text-2xl font-semibold text-[#0f172a]">Add Product</h1>
         <p className="mt-1 text-sm text-[#64748b]">Create a new product and assign category.</p>
         <p className="mt-2 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2 text-xs text-[#475569]">
@@ -274,7 +281,7 @@ export default function AdminAddProductPage() {
             />
             <p className="text-xs text-[#64748b]">Exactly 6 digits. Must be unique for each product.</p>
           </div>
-          <div className="space-y-2 md:col-span-2">
+          <div className="space-y-2">
             <label htmlFor="categoryId" className="text-sm font-medium text-[#334155]">Category *</label>
             <select
               id="categoryId"
@@ -288,6 +295,16 @@ export default function AdminAddProductPage() {
                 <option key={category.id} value={category.id}>{category.name}</option>
               ))}
             </select>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="fabric" className="text-sm font-medium text-[#334155]">Fabric</label>
+            <input
+              id="fabric"
+              value={fabric}
+              onChange={(e) => setFabric(e.target.value)}
+              placeholder="e.g. Pure Kanjivaram Silk"
+              className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 text-sm placeholder:text-[#94a3b8] focus:border-[#0f172a] focus:outline-none"
+            />
           </div>
         </div>
 
@@ -317,17 +334,6 @@ export default function AdminAddProductPage() {
           <p className="text-xs text-[#64748b]">
             Enter one detail per line. Each line will show as a • bullet on the product page.
           </p>
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="fabric" className="text-sm font-medium text-[#334155]">Fabric</label>
-          <input
-            id="fabric"
-            value={fabric}
-            onChange={(e) => setFabric(e.target.value)}
-            placeholder="e.g. Pure Kanjivaram Silk"
-            className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 text-sm placeholder:text-[#94a3b8] focus:border-[#0f172a] focus:outline-none"
-          />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

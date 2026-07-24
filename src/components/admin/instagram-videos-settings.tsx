@@ -58,21 +58,29 @@ export function InstagramVideosSettings() {
       invalidate();
     },
     onError: (error) => {
-      const message = isAxiosError(error)
-        ? (error.response?.data as { message?: string } | undefined)?.message
+      const data = isAxiosError(error)
+        ? (error.response?.data as
+            | { message?: string; errors?: Array<{ message?: string }> }
+            | undefined)
         : undefined;
-      toast.error(message || 'Failed to add Instagram video');
+      const fieldError = data?.errors?.[0]?.message;
+      toast.error(fieldError || data?.message || 'Failed to add Instagram video');
     },
   });
 
   const updateReel = useMutation({
     mutationFn: () => {
       if (!editingId) throw new Error('No video selected');
-      return adminInstagramReelService.update(editingId, {
-        videoUrl: videoUrl.trim(),
+      const payload: {
+        videoUrl?: string;
+        sortOrder: number;
+        isActive: boolean;
+      } = {
         sortOrder: Number(sortOrder) || 0,
         isActive,
-      });
+      };
+      if (videoUrl.trim()) payload.videoUrl = videoUrl.trim();
+      return adminInstagramReelService.update(editingId, payload);
     },
     onSuccess: () => {
       toast.success('Instagram video updated');
@@ -80,10 +88,13 @@ export function InstagramVideosSettings() {
       invalidate();
     },
     onError: (error) => {
-      const message = isAxiosError(error)
-        ? (error.response?.data as { message?: string } | undefined)?.message
+      const data = isAxiosError(error)
+        ? (error.response?.data as
+            | { message?: string; errors?: Array<{ message?: string }> }
+            | undefined)
         : undefined;
-      toast.error(message || 'Failed to update Instagram video');
+      const fieldError = data?.errors?.[0]?.message;
+      toast.error(fieldError || data?.message || 'Failed to update Instagram video');
     },
   });
 
@@ -117,15 +128,16 @@ export function InstagramVideosSettings() {
 
   const startEdit = (reel: InstagramReel) => {
     setEditingId(reel.id);
-    setVideoUrl(reel.videoUrl);
+    // Stored value is a permalink; edits require new embed HTML (or leave blank to keep).
+    setVideoUrl('');
     setSortOrder(String(reel.sortOrder));
     setIsActive(reel.isActive);
   };
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!videoUrl.trim()) {
-      toast.error('Paste an Instagram reel or post URL');
+    if (!editingId && !videoUrl.trim()) {
+      toast.error('Paste Instagram embed HTML only');
       return;
     }
     if (editingId) updateReel.mutate();
@@ -137,22 +149,35 @@ export function InstagramVideosSettings() {
       <div>
         <h2 className="text-lg font-semibold text-[#0f172a]">Instagram videos</h2>
         <p className="mt-1 text-sm text-[#64748b]">
-          Add up to {MAX_REELS} Instagram reel/post links for the homepage. If you add an 11th,
-          the oldest video is removed automatically.
+          Add up to {MAX_REELS} Instagram embeds for the homepage player. Paste Instagram embed HTML
+          only — normal Instagram links are not accepted. If you add an 11th, the oldest video is
+          removed automatically.
         </p>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
         <div>
-          <label className="text-xs font-medium text-[#64748b]">Instagram video URL</label>
-          <input
-            type="text"
-            inputMode="url"
+          <label className="text-xs font-medium text-[#64748b]">Instagram embed code</label>
+          <textarea
             value={videoUrl}
             onChange={(e) => setVideoUrl(e.target.value)}
-            placeholder="https://www.instagram.com/reel/..."
-            className="mt-1.5 h-10 w-full rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm text-[#0f172a] outline-none focus:border-[#0f172a]"
+            placeholder={
+              editingId
+                ? 'Leave blank to keep current video, or paste new Instagram Embed HTML'
+                : 'Paste Instagram Embed HTML only\n(Share → Embed → Copy embed code)'
+            }
+            rows={5}
+            className="mt-1.5 w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 font-mono text-xs text-[#0f172a] outline-none focus:border-[#0f172a]"
           />
+          <p className="mt-1 text-xs text-[#94a3b8]">
+            Embed HTML only. Plain https://instagram.com/reel/... URLs will be rejected.
+          </p>
+          {editingId ? (
+            <p className="mt-1 break-all text-xs text-[#64748b]">
+              Current embed source:{' '}
+              {sortedReels.find((r) => r.id === editingId)?.videoUrl ?? '—'}
+            </p>
+          ) : null}
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>

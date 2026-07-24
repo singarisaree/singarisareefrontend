@@ -1,5 +1,6 @@
 import { orderService } from '@/services/store.service';
 import { formatShortOrderNumber } from '@/lib/utils';
+import { isAxiosError } from 'axios';
 
 type RazorpaySuccessResponse = {
   razorpay_payment_id: string;
@@ -166,21 +167,36 @@ export async function openRazorpayCheckout(
       },
       handler: (response) => {
         if (settled) return;
-        settled = true;
         input.onVerifying?.();
 
-        // Navigate immediately; status pages confirm via polling.
-        void orderService
-          .verifyPayment({
-            orderNumber: input.orderNumber,
-            razorpayOrderId: response.razorpay_order_id,
-            razorpayPaymentId: response.razorpay_payment_id,
-            razorpaySignature: response.razorpay_signature,
-          })
-          .then(() => input.onSuccess?.())
-          .catch(() => undefined);
-
-        finish({ status: 'paid' });
+        void (async () => {
+          try {
+            // Server verifies Razorpay HMAC signature before confirming payment.
+            await orderService.verifyPayment({
+              orderNumber: input.orderNumber,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+            await input.onSuccess?.();
+            finish({ status: 'paid' });
+          } catch (error) {
+            if (isAxiosError(error)) {
+              const status = error.response?.status;
+              if (status && status >= 400 && status < 500) {
+                const message = (error.response?.data as { message?: string } | undefined)
+                  ?.message;
+                finish({
+                  status: 'failed',
+                  reason: message || 'Payment verification failed',
+                });
+                return;
+              }
+            }
+            // Network / 5xx — payment may still be valid; status page reconciles.
+            finish({ status: 'verify_pending' });
+          }
+        })();
       },
     });
 

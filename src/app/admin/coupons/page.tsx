@@ -1,6 +1,7 @@
 'use client';
 
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { adminCouponService } from '@/services/admin.service';
 import { formatPrice } from '@/lib/utils';
@@ -60,6 +61,13 @@ export default function AdminCouponsPage() {
 
   return (
     <div className="space-y-6">
+      <p className="text-sm text-[#64748b]">
+        Promo coupons only. Store credit / refund coupons are managed under{' '}
+        <Link href="/admin/refunds" className="font-medium text-[#0f172a] underline-offset-2 hover:underline">
+          Refunds
+        </Link>
+        .
+      </p>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Total Coupons" value={meta?.total ?? coupons.length} icon={Ticket} iconBg="bg-purple-50" iconColor="text-purple-600" />
         <StatCard label="Active" value={active} subtext="on this page" icon={CheckCircle} iconBg="bg-green-50" iconColor="text-green-600" />

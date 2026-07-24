@@ -267,6 +267,27 @@ export default function CheckoutPage() {
   const settings = usePublicSettings();
   const isLoggedIn = Boolean(customer);
 
+  // After login redirect, jump to the pay button (mobile lands at page top otherwise).
+  useEffect(() => {
+    if (authLoading || !isLoggedIn) return;
+    let shouldFocus = false;
+    try {
+      shouldFocus = sessionStorage.getItem('checkout_focus_pay') === '1';
+      if (shouldFocus) sessionStorage.removeItem('checkout_focus_pay');
+    } catch {
+      shouldFocus = false;
+    }
+    if (!shouldFocus) return;
+
+    const timer = window.setTimeout(() => {
+      document.getElementById('checkout-pay')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [authLoading, isLoggedIn]);
+
   useEffect(() => {
     void preloadRazorpayScript();
     router.prefetch('/order/success');
@@ -766,6 +787,11 @@ export default function CheckoutPage() {
         ...data,
         deliveryCoordinates,
       });
+      try {
+        sessionStorage.setItem('checkout_focus_pay', '1');
+      } catch {
+        // ignore
+      }
       toast.info('Please login to continue');
       router.push('/login?next=/checkout');
       return;
@@ -1022,6 +1048,7 @@ export default function CheckoutPage() {
         </button>
 
         <form
+          id="checkout-form"
           onSubmit={handleSubmit(onSubmit, handleCheckoutValidationError)}
           className="mt-8 grid w-full min-w-0 max-w-full gap-6 sm:gap-8 lg:grid-cols-2"
         >
@@ -1479,6 +1506,7 @@ export default function CheckoutPage() {
                     </p>
                   )}
                   <Button
+                    id="checkout-pay"
                     type="submit"
                     variant="gold"
                     size="lg"
@@ -1510,6 +1538,39 @@ export default function CheckoutPage() {
                 </section>
               </div>
         </form>
+
+        {/* Mobile: always-visible pay CTA so users aren't stuck at page top after login */}
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/20 bg-cream/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm lg:hidden">
+          <div className="mx-auto flex max-w-7xl items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs text-brown-light">Grand total</p>
+              <p className="truncate text-base font-semibold text-charcoal">
+                {formatPrice(grandTotal)}
+              </p>
+            </div>
+            <Button
+              type="submit"
+              form="checkout-form"
+              variant="gold"
+              size="lg"
+              className="shrink-0 px-5"
+              disabled={isSubmitting || authLoading || !canProceedToPayment}
+            >
+              {isSubmitting
+                ? paymentPhase === 'checkout'
+                  ? 'Pay…'
+                  : '…'
+                : shippingStatus === 'unavailable'
+                  ? 'Unavailable'
+                  : !isLoggedIn
+                    ? 'Login & Pay'
+                    : grandTotal <= 0
+                      ? 'Place Order'
+                      : 'Proceed to Payment'}
+            </Button>
+          </div>
+        </div>
+        <div className="h-24 lg:hidden" aria-hidden />
       </div>
       <PaymentStatusOverlay phase={paymentPhase} />
     </>

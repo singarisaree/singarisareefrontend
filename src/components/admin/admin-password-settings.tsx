@@ -3,8 +3,54 @@
 import { FormEvent, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
+import { Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { adminAuthService } from '@/services/admin.service';
+
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  autoComplete,
+  hint,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+  hint?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div>
+      <label htmlFor={id} className="text-sm font-medium text-[#334155]">
+        {label}
+      </label>
+      <div className="relative mt-1.5">
+        <input
+          id={id}
+          type={visible ? 'text' : 'password'}
+          autoComplete={autoComplete}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded-lg border border-[#e2e8f0] px-3 py-2.5 pr-11 text-sm text-[#0f172a] outline-none focus:border-[#0f172a]"
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          className="absolute inset-y-0 right-0 flex items-center px-3 text-[#64748b] hover:text-[#0f172a]"
+          aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+        >
+          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+      {hint ? <p className="mt-1 text-xs text-[#94a3b8]">{hint}</p> : null}
+    </div>
+  );
+}
 
 export function AdminPasswordSettings() {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -68,46 +114,28 @@ export function AdminPasswordSettings() {
       </div>
 
       <form onSubmit={onSubmit} className="max-w-md space-y-4">
-        <div>
-          <label htmlFor="currentPassword" className="text-sm font-medium text-[#334155]">
-            Current password
-          </label>
-          <input
-            id="currentPassword"
-            type="password"
-            autoComplete="current-password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-[#e2e8f0] px-3 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#0f172a]"
-          />
-        </div>
-        <div>
-          <label htmlFor="newPassword" className="text-sm font-medium text-[#334155]">
-            New password
-          </label>
-          <input
-            id="newPassword"
-            type="password"
-            autoComplete="new-password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-[#e2e8f0] px-3 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#0f172a]"
-          />
-          <p className="mt-1 text-xs text-[#94a3b8]">Minimum 8 characters</p>
-        </div>
-        <div>
-          <label htmlFor="confirmPassword" className="text-sm font-medium text-[#334155]">
-            Confirm new password
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="mt-1.5 w-full rounded-lg border border-[#e2e8f0] px-3 py-2.5 text-sm text-[#0f172a] outline-none focus:border-[#0f172a]"
-          />
-        </div>
+        <PasswordField
+          id="currentPassword"
+          label="Current password"
+          autoComplete="current-password"
+          value={currentPassword}
+          onChange={setCurrentPassword}
+        />
+        <PasswordField
+          id="newPassword"
+          label="New password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={setNewPassword}
+          hint="Minimum 8 characters"
+        />
+        <PasswordField
+          id="confirmPassword"
+          label="Confirm new password"
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={setConfirmPassword}
+        />
 
         <button
           type="submit"

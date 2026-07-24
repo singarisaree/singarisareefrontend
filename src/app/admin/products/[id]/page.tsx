@@ -481,11 +481,14 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
           <AdminDetailSection title="Basic Information">
             <div className="grid gap-4 md:grid-cols-2">
               <AdminFormField label="Product Name" value={name} onChange={setName} />
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
               <AdminFormSelect label="Category" value={categoryId} onChange={setCategoryId}>
                 {categories.map((category: Category) => (
                   <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
               </AdminFormSelect>
+              <AdminFormField label="Fabric" value={fabric} onChange={setFabric} />
             </div>
             <div className="mt-4">
               <AdminFormTextarea label="Description" value={description} onChange={setDescription} rows={5} />
@@ -503,10 +506,9 @@ export default function AdminProductDetailPage({ params }: { params: Promise<{ i
           </AdminDetailSection>
 
           <AdminDetailSection title="Pricing & Details">
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <AdminFormField label="Price (Rs.)" value={price} onChange={setPrice} type="number" />
               <AdminFormField label="MRP (Rs.)" value={mrp} onChange={setMrp} type="number" />
-              <AdminFormField label="Fabric" value={fabric} onChange={setFabric} />
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-4">
               <AdminFormField label="Weight (grams)" value={weight} onChange={setWeight} type="number" placeholder="e.g. 500" />

@@ -462,12 +462,6 @@ export default function AdminUsersPage() {
                 </Link>
                 . Pick one, then edit heading, story, and link.
               </p>
-              <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                <span className="font-semibold">“Sent” means Meta accepted the API call</span> — not
-                that every phone received it. Check Meta WhatsApp Manager → Insights / Message
-                logs for delivery. Webhook must be configured for this site to show Delivered /
-                Failed after send.
-              </p>
               {marketingWhatsAppTemplates.length === 0 ? (
                 <p className="mt-4 text-sm text-amber-700">
                   No marketing templates found. Configure text and image marketing templates in Settings.

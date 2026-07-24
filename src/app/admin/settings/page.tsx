@@ -403,7 +403,7 @@ export default function AdminSettingsPage() {
   const currentImage = previewUrl || ourStoryImage?.imageUrl || null;
 
   return (
-    <div className="w-full max-w-5xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-[#0f172a]">Settings</h1>
         <p className="mt-1 text-sm text-[#64748b]">
@@ -412,13 +412,13 @@ export default function AdminSettingsPage() {
         </p>
       </div>
 
-      <nav className="flex gap-1 overflow-x-auto rounded-xl border border-[#e2e8f0] bg-white p-1.5 shadow-sm">
+      <nav className="flex w-full flex-wrap gap-1 rounded-xl border border-[#e2e8f0] bg-white p-1.5 shadow-sm">
         {SETTINGS_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+            className={`min-w-0 flex-1 rounded-lg px-2 py-2.5 text-center text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
               activeTab === tab.id
                 ? "bg-[#0f172a] text-white"
                 : "text-[#64748b] hover:bg-[#f1f5f9]"

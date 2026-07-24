@@ -600,28 +600,6 @@ export function WhatsAppTemplateSettings() {
                     </div>
                   ) : null}
 
-                  {template.kind === "customer_login_otp" ? (
-                    <div className="space-y-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-                      <p>
-                        <span className="font-semibold">Why OTP can fail when other templates work:</span>{" "}
-                        Order/marketing templates are UTILITY or MARKETING. Login OTP is{" "}
-                        <span className="font-semibold">AUTHENTICATION</span>, which Meta restricts.
-                        Meta requires a <span className="font-semibold">verified business</span> and
-                        usually messaging limit <span className="font-semibold">Tier 1 (2,000+)</span>{" "}
-                        before AUTHENTICATION templates can be created.
-                      </p>
-                      <p>
-                        <span className="font-semibold">WhatsApp:</span> Submit → wait for APPROVED →
-                        Activate. Meta controls the OTP wording (copy-code button).
-                      </p>
-                      <p>
-                        <span className="font-semibold">SMS:</span> Sent.dm sends the same OTP
-                        separately and does not use this Meta template — login SMS can work even if
-                        WhatsApp OTP is blocked.
-                      </p>
-                    </div>
-                  ) : null}
-
                   {locked ? (
                     <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
                       {template.status === "PENDING"

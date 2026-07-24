@@ -278,9 +278,6 @@ function LoginForm() {
               <p className="text-sm text-brown-light">
                 OTP sent to <span className="font-medium text-charcoal">{phone}</span>
               </p>
-              <p className="text-xs text-brown-light">
-                We can detect SMS OTP on supported phones, or you can enter it and verify.
-              </p>
               {debugOtp ? (
                 <p className="rounded-md bg-beige/50 px-3 py-2 text-xs text-brown-light">
                   Dev OTP (Sent.dm keys not set):{' '}
