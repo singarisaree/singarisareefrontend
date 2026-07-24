@@ -16,77 +16,58 @@ type InstagramReelsSliderProps = {
 };
 
 const FIRST_BATCH = 5;
-const PRELOAD_TIMEOUT_MS = 12_000;
+const PRELOAD_TIMEOUT_MS = 15_000;
 
-/** Warm the browser cache for a video URL (first 5, then next 5). */
-function preloadVideoSrc(src: string): Promise<void> {
-  if (typeof window === 'undefined' || !src) return Promise.resolve();
+/**
+ * Preload videos into memory and keep elements alive so the cache is warm.
+ * Does not clear src (clearing was dropping the buffer and showing dark cards).
+ */
+function preloadVideos(urls: string[]): Promise<HTMLVideoElement[]> {
+  if (typeof window === 'undefined' || !urls.length) return Promise.resolve([]);
 
-  return new Promise((resolve) => {
-    const video = document.createElement('video');
-    video.muted = true;
-    video.playsInline = true;
-    video.preload = 'auto';
+  return Promise.all(
+    urls.map(
+      (src) =>
+        new Promise<HTMLVideoElement>((resolve) => {
+          const video = document.createElement('video');
+          video.muted = true;
+          video.playsInline = true;
+          video.preload = 'auto';
+          video.setAttribute('playsinline', '');
+          video.setAttribute('webkit-playsinline', '');
 
-    let settled = false;
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timer);
-      video.removeAttribute('src');
-      try {
-        video.load();
-      } catch {
-        // ignore
-      }
-      resolve();
-    };
+          let settled = false;
+          const finish = () => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timer);
+            resolve(video);
+          };
 
-    const timer = window.setTimeout(finish, PRELOAD_TIMEOUT_MS);
-    video.addEventListener('canplaythrough', finish, { once: true });
-    video.addEventListener('error', finish, { once: true });
-    video.src = src;
-    video.load();
-  });
+          const timer = window.setTimeout(finish, PRELOAD_TIMEOUT_MS);
+          video.addEventListener('canplaythrough', finish, { once: true });
+          video.addEventListener('error', finish, { once: true });
+          video.src = src;
+          video.load();
+        }),
+    ),
+  );
 }
 
 const ReelCard = memo(function ReelCard({
   videoSrc,
   instagramUrl,
-  canLoad,
 }: {
   videoSrc: string;
   instagramUrl: string;
-  canLoad: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isReady, setIsReady] = useState(false);
-
-  useEffect(() => {
-    setIsReady(false);
-  }, [videoSrc, canLoad]);
 
   useEffect(() => {
     const el = videoRef.current;
-    if (!el || !canLoad) return;
-
-    const markReady = () => setIsReady(true);
-    if (el.readyState >= 3) markReady();
-    el.addEventListener('canplay', markReady);
-    el.addEventListener('loadeddata', markReady);
-
-    return () => {
-      el.removeEventListener('canplay', markReady);
-      el.removeEventListener('loadeddata', markReady);
-    };
-  }, [canLoad, videoSrc]);
-
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el || !canLoad) return;
+    if (!el) return;
 
     const tryPlay = () => {
-      if (!isReady) return;
       void el.play().catch(() => undefined);
     };
 
@@ -103,27 +84,23 @@ const ReelCard = memo(function ReelCard({
     observer.observe(el);
     tryPlay();
     return () => observer.disconnect();
-  }, [canLoad, isReady, videoSrc]);
+  }, [videoSrc]);
 
   return (
     <article
-      className="relative aspect-[9/16] w-[calc((100%-0.75rem)/2)] shrink-0 snap-start overflow-hidden rounded-lg bg-[#0f0f0f] lg:w-[calc((100%-3rem)/5)]"
+      className="relative aspect-[9/16] w-[calc((100%-0.75rem)/2)] shrink-0 snap-start overflow-hidden rounded-lg bg-transparent lg:w-[calc((100%-3rem)/5)]"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '160px 280px' } as CSSProperties}
     >
-      {canLoad ? (
-        <video
-          ref={videoRef}
-          src={videoSrc}
-          className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-300 ${
-            isReady ? 'opacity-100' : 'opacity-0'
-          }`}
-          muted
-          playsInline
-          loop
-          autoPlay
-          preload="auto"
-        />
-      ) : null}
+      <video
+        ref={videoRef}
+        src={videoSrc}
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        muted
+        playsInline
+        loop
+        autoPlay
+        preload="auto"
+      />
       <InstagramAppLink
         instagramUrl={instagramUrl}
         aria-label="Open this Instagram video"
@@ -147,30 +124,62 @@ function InstagramReelsSliderInner({ reels, className }: InstagramReelsSliderPro
     [reels],
   );
 
-  // 1 = first 5 loading/shown, 2 = next 5 unlocked after first batch is warm
-  const [loadBatch, setLoadBatch] = useState(1);
+  // Hold preloaded <video> nodes so buffers stay warm
+  const holdersRef = useRef<HTMLVideoElement[]>([]);
+  const [firstReady, setFirstReady] = useState(false);
+  const [secondReady, setSecondReady] = useState(false);
 
   useEffect(() => {
     if (!items.length) return;
 
     let cancelled = false;
-    setLoadBatch(1);
+    setFirstReady(false);
+    setSecondReady(false);
+
+    // Release previous holders
+    holdersRef.current.forEach((video) => {
+      try {
+        video.pause();
+        video.removeAttribute('src');
+        video.load();
+      } catch {
+        // ignore
+      }
+    });
+    holdersRef.current = [];
 
     void (async () => {
-      const urls = items.map((item) => item.videoSrc);
-      const first = urls.slice(0, FIRST_BATCH);
-      const second = urls.slice(FIRST_BATCH);
+      const firstUrls = items.slice(0, FIRST_BATCH).map((item) => item.videoSrc);
+      const secondUrls = items.slice(FIRST_BATCH).map((item) => item.videoSrc);
 
-      // Warm cache for first 5, then unlock + warm next 5
-      await Promise.all(first.map((src) => preloadVideoSrc(src)));
-      if (cancelled) return;
-
-      if (second.length) {
-        setLoadBatch(2);
-        await Promise.all(second.map((src) => preloadVideoSrc(src)));
-      } else {
-        setLoadBatch(2);
+      // Load first 5 as soon as user lands on homepage — only then show the row
+      const firstHolders = await preloadVideos(firstUrls);
+      if (cancelled) {
+        firstHolders.forEach((v) => {
+          v.removeAttribute('src');
+          v.load();
+        });
+        return;
       }
+      holdersRef.current.push(...firstHolders);
+      setFirstReady(true);
+
+      if (!secondUrls.length) {
+        setSecondReady(true);
+        return;
+      }
+
+      // Then warm next 5 in the background
+      const secondHolders = await preloadVideos(secondUrls);
+      if (cancelled) {
+        secondHolders.forEach((v) => {
+          v.removeAttribute('src');
+          v.load();
+        });
+        return;
+      }
+      holdersRef.current.push(...secondHolders);
+      setSecondReady(true);
     })();
 
     return () => {
@@ -178,7 +187,27 @@ function InstagramReelsSliderInner({ reels, className }: InstagramReelsSliderPro
     };
   }, [items]);
 
+  useEffect(() => {
+    return () => {
+      holdersRef.current.forEach((video) => {
+        try {
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+        } catch {
+          // ignore
+        }
+      });
+      holdersRef.current = [];
+    };
+  }, []);
+
   if (!items.length) return null;
+
+  // No dark cards / spinner — hide section until first 5 are ready to play
+  if (!firstReady) return null;
+
+  const visibleItems = secondReady ? items : items.slice(0, FIRST_BATCH);
 
   return (
     <div className={className}>
@@ -186,13 +215,8 @@ function InstagramReelsSliderInner({ reels, className }: InstagramReelsSliderPro
         className="flex w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth pb-2 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
         style={{ WebkitOverflowScrolling: 'touch' } as CSSProperties}
       >
-        {items.map((item, index) => (
-          <ReelCard
-            key={item.id}
-            videoSrc={item.videoSrc}
-            instagramUrl={item.instagramUrl}
-            canLoad={index < FIRST_BATCH || loadBatch >= 2}
-          />
+        {visibleItems.map((item) => (
+          <ReelCard key={item.id} videoSrc={item.videoSrc} instagramUrl={item.instagramUrl} />
         ))}
       </div>
     </div>
