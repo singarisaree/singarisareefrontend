@@ -106,6 +106,8 @@ export interface InstagramFeed {
 export interface InstagramReel {
   id: string;
   videoUrl: string;
+  publicId?: string;
+  instagramUrl: string;
   sortOrder: number;
   isActive: boolean;
   createdAt: string;

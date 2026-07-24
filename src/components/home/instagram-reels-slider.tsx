@@ -1,79 +1,100 @@
 'use client';
 
-import { memo, useMemo, type CSSProperties } from 'react';
-import { openInstagramMediaInApp, parseInstagramMedia } from '@/lib/open-instagram';
+import { memo, useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { openInstagramMediaInApp } from '@/lib/open-instagram';
+import { resolveStorefrontImageUrl } from '@/lib/image';
 
-export type InstagramReelUrl = string;
+export type InstagramReelItem = {
+  id: string;
+  videoUrl: string;
+  instagramUrl: string;
+};
 
 type InstagramReelsSliderProps = {
-  urls: InstagramReelUrl[];
+  reels: InstagramReelItem[];
   className?: string;
 };
 
-function parseInstagramPaths(url: string): { embedSrc: string; permalink: string } | null {
-  const media = parseInstagramMedia(url);
-  if (!media) return null;
-  return {
-    permalink: media.webUrl,
-    embedSrc: `${media.webUrl}embed/?autoplay=1`,
-  };
-}
-
 const ReelCard = memo(function ReelCard({
-  embedSrc,
-  permalink,
+  videoSrc,
+  instagramUrl,
 }: {
-  embedSrc: string;
-  permalink: string;
+  videoSrc: string;
+  instagramUrl: string;
 }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+
+    const tryPlay = () => {
+      void el.play().catch(() => undefined);
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        if (entry.isIntersecting) tryPlay();
+        else el.pause();
+      },
+      { threshold: 0.35 },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [videoSrc]);
+
   return (
     <article
-      className="relative aspect-[9/16] w-[calc(50%-0.5rem)] shrink-0 snap-start overflow-hidden rounded-xl bg-[#fafafa] sm:w-[calc(50%-0.75rem)]"
-      style={{ contentVisibility: 'auto', containIntrinsicSize: '280px 500px' } as CSSProperties}
+      className="relative aspect-[9/16] w-[calc((100%-0.75rem)/2)] shrink-0 snap-start overflow-hidden rounded-lg bg-[#0f0f0f] lg:w-[calc((100%-3rem)/5)]"
+      style={{ contentVisibility: 'auto', containIntrinsicSize: '160px 280px' } as CSSProperties}
     >
-      <iframe
-        src={embedSrc}
-        title="Instagram video"
-        loading="lazy"
-        allow="autoplay; encrypted-media; clipboard-write; fullscreen"
-        allowFullScreen
-        scrolling="no"
-        className="pointer-events-none absolute inset-0 h-full w-full border-0"
+      <video
+        ref={videoRef}
+        src={videoSrc}
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        muted
+        playsInline
+        loop
+        autoPlay
+        preload="metadata"
       />
       <button
         type="button"
-        onClick={() => openInstagramMediaInApp(permalink)}
-        aria-label="Open this Instagram video in the Instagram app"
+        onClick={() => openInstagramMediaInApp(instagramUrl)}
+        aria-label="Open this Instagram video"
         className="absolute inset-0 z-10 cursor-pointer"
       />
     </article>
   );
 });
 
-function InstagramReelsSliderInner({ urls, className }: InstagramReelsSliderProps) {
-  const items = useMemo(() => {
-    const seen = new Set<string>();
-    const next: Array<{ embedSrc: string; permalink: string }> = [];
-    for (const url of urls) {
-      const parsed = parseInstagramPaths(url);
-      if (!parsed || seen.has(parsed.permalink)) continue;
-      seen.add(parsed.permalink);
-      next.push(parsed);
-      if (next.length >= 10) break;
-    }
-    return next;
-  }, [urls]);
+function InstagramReelsSliderInner({ reels, className }: InstagramReelsSliderProps) {
+  const items = useMemo(
+    () =>
+      reels
+        .filter((reel) => reel.videoUrl && reel.instagramUrl)
+        .slice(0, 10)
+        .map((reel) => ({
+          id: reel.id,
+          videoSrc: resolveStorefrontImageUrl(reel.videoUrl),
+          instagramUrl: reel.instagramUrl,
+        })),
+    [reels],
+  );
 
   if (!items.length) return null;
 
   return (
     <div className={className}>
       <div
-        className="flex w-full snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain scroll-smooth pb-2 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
+        className="flex w-full snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-smooth pb-2 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch]"
         style={{ WebkitOverflowScrolling: 'touch' } as CSSProperties}
       >
         {items.map((item) => (
-          <ReelCard key={item.permalink} embedSrc={item.embedSrc} permalink={item.permalink} />
+          <ReelCard key={item.id} videoSrc={item.videoSrc} instagramUrl={item.instagramUrl} />
         ))}
       </div>
     </div>

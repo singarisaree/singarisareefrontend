@@ -353,12 +353,14 @@ export const adminBannerService = {
 
 export const adminInstagramReelService = {
   getAll: () => apiGet<InstagramReel[]>("/instagram/reels/all"),
-  create: (data: { videoUrl: string; sortOrder?: number; isActive?: boolean }) =>
-    apiPost<InstagramReel>("/instagram/reels", data),
-  update: (
-    id: string,
-    data: { videoUrl?: string; sortOrder?: number; isActive?: boolean },
-  ) => apiPut<InstagramReel>(`/instagram/reels/${id}`, data),
+  create: (formData: FormData) =>
+    api.post<{ data: InstagramReel }>("/instagram/reels", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((res) => res.data.data),
+  update: (id: string, formData: FormData) =>
+    api.put<{ data: InstagramReel }>(`/instagram/reels/${id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }).then((res) => res.data.data),
   reorder: (orderedIds: string[]) =>
     apiPut<InstagramReel[]>("/instagram/reels/reorder", { orderedIds }),
   delete: (id: string) => apiDelete(`/instagram/reels/${id}`),

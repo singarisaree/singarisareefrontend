@@ -33,7 +33,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
             src={category.imageUrl}
             alt={category.name}
             fill
-            sizes="(max-width: 640px) 48vw, (max-width: 1024px) 11rem, 14rem"
+            sizes="(max-width: 640px) 42vw, (max-width: 1024px) 11rem, 14rem"
             className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
             loading="lazy"
             quality={80}

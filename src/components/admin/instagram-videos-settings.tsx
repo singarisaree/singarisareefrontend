@@ -7,14 +7,17 @@ import { toast } from 'sonner';
 import { isAxiosError } from 'axios';
 import { adminInstagramReelService } from '@/services/admin.service';
 import { refreshStorefrontAfterInstagramChange } from '@/lib/refresh-storefront';
+import { resolveStorefrontImageUrl } from '@/lib/image';
 import { StatusBadge } from '@/components/admin/status-badge';
 import type { InstagramReel } from '@/types';
 
 const MAX_REELS = 10;
+const MAX_UPLOAD_MB = 40;
 
 export function InstagramVideosSettings() {
   const queryClient = useQueryClient();
-  const [videoUrl, setVideoUrl] = useState('');
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [instagramUrl, setInstagramUrl] = useState('');
   const [sortOrder, setSortOrder] = useState('0');
   const [isActive, setIsActive] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,12 +28,16 @@ export function InstagramVideosSettings() {
   });
 
   const sortedReels = useMemo(
-    () => [...reels].sort((a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt)),
+    () =>
+      [...reels].sort(
+        (a, b) => a.sortOrder - b.sortOrder || a.createdAt.localeCompare(b.createdAt),
+      ),
     [reels],
   );
 
   const resetForm = () => {
-    setVideoUrl('');
+    setVideoFile(null);
+    setInstagramUrl('');
     setSortOrder(String(sortedReels.length));
     setIsActive(true);
     setEditingId(null);
@@ -41,13 +48,27 @@ export function InstagramVideosSettings() {
     void refreshStorefrontAfterInstagramChange();
   };
 
+  const buildFormData = (requireVideo: boolean) => {
+    if (requireVideo && !videoFile) {
+      throw new Error('Video file is required');
+    }
+    if (!instagramUrl.trim()) {
+      throw new Error('Instagram link is required');
+    }
+    if (videoFile && videoFile.size > MAX_UPLOAD_MB * 1024 * 1024) {
+      throw new Error(`Video must be under ${MAX_UPLOAD_MB} MB`);
+    }
+
+    const formData = new FormData();
+    if (videoFile) formData.append('video', videoFile);
+    formData.append('instagramUrl', instagramUrl.trim());
+    formData.append('sortOrder', String(Number(sortOrder) || 0));
+    formData.append('isActive', String(isActive));
+    return formData;
+  };
+
   const createReel = useMutation({
-    mutationFn: () =>
-      adminInstagramReelService.create({
-        videoUrl: videoUrl.trim(),
-        sortOrder: Number(sortOrder) || 0,
-        isActive,
-      }),
+    mutationFn: () => adminInstagramReelService.create(buildFormData(true)),
     onSuccess: () => {
       toast.success(
         sortedReels.length >= MAX_REELS
@@ -58,29 +79,21 @@ export function InstagramVideosSettings() {
       invalidate();
     },
     onError: (error) => {
+      if (error instanceof Error && !isAxiosError(error)) {
+        toast.error(error.message);
+        return;
+      }
       const data = isAxiosError(error)
-        ? (error.response?.data as
-            | { message?: string; errors?: Array<{ message?: string }> }
-            | undefined)
+        ? (error.response?.data as { message?: string } | undefined)
         : undefined;
-      const fieldError = data?.errors?.[0]?.message;
-      toast.error(fieldError || data?.message || 'Failed to add Instagram video');
+      toast.error(data?.message || 'Failed to add Instagram video');
     },
   });
 
   const updateReel = useMutation({
     mutationFn: () => {
       if (!editingId) throw new Error('No video selected');
-      const payload: {
-        videoUrl?: string;
-        sortOrder: number;
-        isActive: boolean;
-      } = {
-        sortOrder: Number(sortOrder) || 0,
-        isActive,
-      };
-      if (videoUrl.trim()) payload.videoUrl = videoUrl.trim();
-      return adminInstagramReelService.update(editingId, payload);
+      return adminInstagramReelService.update(editingId, buildFormData(false));
     },
     onSuccess: () => {
       toast.success('Instagram video updated');
@@ -88,13 +101,14 @@ export function InstagramVideosSettings() {
       invalidate();
     },
     onError: (error) => {
+      if (error instanceof Error && !isAxiosError(error)) {
+        toast.error(error.message);
+        return;
+      }
       const data = isAxiosError(error)
-        ? (error.response?.data as
-            | { message?: string; errors?: Array<{ message?: string }> }
-            | undefined)
+        ? (error.response?.data as { message?: string } | undefined)
         : undefined;
-      const fieldError = data?.errors?.[0]?.message;
-      toast.error(fieldError || data?.message || 'Failed to update Instagram video');
+      toast.error(data?.message || 'Failed to update Instagram video');
     },
   });
 
@@ -128,18 +142,14 @@ export function InstagramVideosSettings() {
 
   const startEdit = (reel: InstagramReel) => {
     setEditingId(reel.id);
-    // Stored value is a permalink; edits require new embed HTML (or leave blank to keep).
-    setVideoUrl('');
+    setVideoFile(null);
+    setInstagramUrl(reel.instagramUrl);
     setSortOrder(String(reel.sortOrder));
     setIsActive(reel.isActive);
   };
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!editingId && !videoUrl.trim()) {
-      toast.error('Paste Instagram embed HTML only');
-      return;
-    }
     if (editingId) updateReel.mutate();
     else createReel.mutate();
   };
@@ -149,36 +159,47 @@ export function InstagramVideosSettings() {
       <div>
         <h2 className="text-lg font-semibold text-[#0f172a]">Instagram videos</h2>
         <p className="mt-1 text-sm text-[#64748b]">
-          Add up to {MAX_REELS} Instagram embeds for the homepage player. Paste Instagram embed HTML
-          only — normal Instagram links are not accepted. If you add an 11th, the oldest video is
-          removed automatically.
+          Upload up to {MAX_REELS} videos for the homepage. Videos are converted to MP4 and
+          compressed. Add the Instagram link so taps open that reel in the Instagram app. If you
+          add an 11th, the oldest is removed.
         </p>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] p-4">
         <div>
-          <label className="text-xs font-medium text-[#64748b]">Instagram embed code</label>
-          <textarea
-            value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
-            placeholder={
-              editingId
-                ? 'Leave blank to keep current video, or paste new Instagram Embed HTML'
-                : 'Paste Instagram Embed HTML only\n(Share → Embed → Copy embed code)'
-            }
-            rows={5}
-            className="mt-1.5 w-full rounded-lg border border-[#e2e8f0] bg-white px-3 py-2 font-mono text-xs text-[#0f172a] outline-none focus:border-[#0f172a]"
+          <label className="text-xs font-medium text-[#64748b]">
+            Video file {editingId ? '(optional — leave blank to keep current)' : '*'}
+          </label>
+          <input
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"
+            onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+            className="mt-1.5 block w-full text-sm text-[#0f172a] file:mr-3 file:rounded-lg file:border-0 file:bg-[#0f172a] file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
           />
           <p className="mt-1 text-xs text-[#94a3b8]">
-            Embed HTML only. Plain https://instagram.com/reel/... URLs will be rejected.
+            MP4 / WebM / MOV up to {MAX_UPLOAD_MB} MB. Server converts to compressed MP4 (~720p).
           </p>
-          {editingId ? (
-            <p className="mt-1 break-all text-xs text-[#64748b]">
-              Current embed source:{' '}
-              {sortedReels.find((r) => r.id === editingId)?.videoUrl ?? '—'}
+          {videoFile ? (
+            <p className="mt-1 text-xs text-[#64748b]">
+              Selected: {videoFile.name} ({(videoFile.size / (1024 * 1024)).toFixed(1)} MB)
             </p>
           ) : null}
         </div>
+
+        <div>
+          <label className="text-xs font-medium text-[#64748b]">Instagram link *</label>
+          <input
+            type="url"
+            value={instagramUrl}
+            onChange={(e) => setInstagramUrl(e.target.value)}
+            placeholder="https://www.instagram.com/reel/..."
+            className="mt-1.5 h-10 w-full rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm text-[#0f172a] outline-none focus:border-[#0f172a]"
+          />
+          <p className="mt-1 text-xs text-[#94a3b8]">
+            Clicking the homepage video opens this Instagram reel.
+          </p>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs font-medium text-[#64748b]">Sort order</label>
@@ -200,6 +221,7 @@ export function InstagramVideosSettings() {
             Visible on homepage
           </label>
         </div>
+
         <div className="flex flex-wrap gap-2">
           <button
             type="submit"
@@ -211,7 +233,7 @@ export function InstagramVideosSettings() {
                 ? 'Updating…'
                 : 'Update video'
               : createReel.isPending
-                ? 'Adding…'
+                ? 'Uploading & converting…'
                 : 'Add video'}
           </button>
           {editingId ? (
@@ -241,21 +263,30 @@ export function InstagramVideosSettings() {
                 key={reel.id}
                 className="flex flex-col gap-3 rounded-lg border border-[#e2e8f0] p-3 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0 flex-1">
-                  <div className="mb-1 flex flex-wrap items-center gap-2">
-                    <StatusBadge variant={reel.isActive ? 'active' : 'inactive'}>
-                      {reel.isActive ? 'Live' : 'Hidden'}
-                    </StatusBadge>
-                    <span className="text-xs text-[#94a3b8]">Order {reel.sortOrder}</span>
+                <div className="flex min-w-0 flex-1 gap-3">
+                  <video
+                    src={resolveStorefrontImageUrl(reel.videoUrl)}
+                    className="h-20 w-14 shrink-0 rounded-md object-cover bg-[#f1f5f9]"
+                    muted
+                    playsInline
+                    preload="metadata"
+                  />
+                  <div className="min-w-0">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                      <StatusBadge variant={reel.isActive ? 'active' : 'inactive'}>
+                        {reel.isActive ? 'Live' : 'Hidden'}
+                      </StatusBadge>
+                      <span className="text-xs text-[#94a3b8]">Order {reel.sortOrder}</span>
+                    </div>
+                    <a
+                      href={reel.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="break-all text-sm text-[#0f172a] underline-offset-2 hover:underline"
+                    >
+                      {reel.instagramUrl}
+                    </a>
                   </div>
-                  <a
-                    href={reel.videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="break-all text-sm text-[#0f172a] underline-offset-2 hover:underline"
-                  >
-                    {reel.videoUrl}
-                  </a>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-1.5">
                   <button

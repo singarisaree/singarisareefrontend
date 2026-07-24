@@ -418,7 +418,7 @@ export default function AdminSettingsPage() {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`min-w-0 flex-1 rounded-lg px-2 py-2.5 text-center text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
+            className={`shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
               activeTab === tab.id
                 ? "bg-[#0f172a] text-white"
                 : "text-[#64748b] hover:bg-[#f1f5f9]"

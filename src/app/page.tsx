@@ -55,7 +55,11 @@ async function HomeHero() {
 
 async function HomeBelowFold() {
   const { categories, products, settings, instagramReels = [] } = await loadHomepageData();
-  const reelUrls = instagramReels.map((reel) => reel.videoUrl);
+  const reelItems = instagramReels.map((reel) => ({
+    id: reel.id,
+    videoUrl: reel.videoUrl,
+    instagramUrl: reel.instagramUrl,
+  }));
 
   return (
     <>
@@ -71,7 +75,7 @@ async function HomeBelowFold() {
               {categories.slice(0, 100).map((category) => (
                 <div
                   key={category.id}
-                  className="w-[48vw] max-w-[13.25rem] shrink-0 sm:w-48 sm:max-w-none lg:w-56"
+                  className="w-[42vw] max-w-[11.66rem] shrink-0 sm:w-48 sm:max-w-none lg:w-56"
                 >
                   <CategoryCard category={category} />
                 </div>
@@ -123,8 +127,8 @@ async function HomeBelowFold() {
             </svg>
             <span className="text-xs font-medium tracking-wide text-maroon">INSTAGRAM</span>
           </div>
-          {reelUrls.length > 0 && (
-            <InstagramReelsSlider urls={reelUrls} className="mt-8 text-left" />
+          {reelItems.length > 0 && (
+            <InstagramReelsSlider reels={reelItems} className="mt-8 text-left" />
           )}
           <h2 className="mt-5 font-serif text-2xl tracking-wide text-charcoal sm:text-3xl">
             Join Our Saree Community
