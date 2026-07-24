@@ -22,7 +22,7 @@ import { ProductLikeButton } from '@/components/products/product-like-button';
 import { ProductImageLightbox } from '@/components/products/product-image-lightbox';
 import { useCartStore } from '@/stores/cart-store';
 import { formatAmount, calculateDiscount, isProductFullyOutOfStock } from '@/lib/utils';
-import { openInstagramMediaInApp } from '@/lib/open-instagram';
+import { InstagramAppLink } from '@/components/instagram-app-link';
 import type { Product, ProductColor } from '@/types';
 
 interface ProductDetailClientProps {
@@ -296,13 +296,12 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
             {selectedColor?.instagramVideoUrl ? (
               <p className="mt-4 text-sm">
-                <button
-                  type="button"
-                  onClick={() => openInstagramMediaInApp(selectedColor.instagramVideoUrl!)}
+                <InstagramAppLink
+                  instagramUrl={selectedColor.instagramVideoUrl}
                   className="font-medium text-maroon underline underline-offset-4 transition-colors hover:text-gold"
                 >
                   Click here to watch on Instagram
-                </button>
+                </InstagramAppLink>
               </p>
             ) : null}
 
