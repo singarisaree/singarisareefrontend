@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -133,9 +132,8 @@ function getOrderStatusLine(order: Order, displayStatus: string): string {
 }
 
 export default function MyOrdersPage() {
-  const router = useRouter();
   const queryClient = useQueryClient();
-  const { customer, isLoading: authLoading } = useCustomerAuth();
+  const { customer, isLoading: authLoading, openLogin } = useCustomerAuth();
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [expandedReturnOrderId, setExpandedReturnOrderId] = useState<string | null>(null);
 
@@ -163,8 +161,8 @@ export default function MyOrdersPage() {
 
   useEffect(() => {
     if (authLoading || customer) return;
-    router.replace('/login?next=/my-orders');
-  }, [authLoading, customer, router]);
+    openLogin({ next: '/my-orders' });
+  }, [authLoading, customer, openLogin]);
 
   const toggleOrder = (orderId: string) => {
     setExpandedOrderId((current) => (current === orderId ? null : orderId));

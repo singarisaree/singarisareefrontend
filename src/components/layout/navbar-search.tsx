@@ -235,7 +235,7 @@ export function NavbarSearch({ onNavigate, className }: NavbarSearchProps) {
         <label htmlFor={inputId} className="sr-only">
           Search by product name or SKU
         </label>
-        <div className="flex w-56 items-center gap-2 rounded-full border border-maroon/20 bg-cream/90 px-3 py-1.5 transition-colors focus-within:border-maroon/45 focus-within:ring-2 focus-within:ring-maroon/10 xl:w-64">
+        <div className="flex w-40 items-center gap-2 rounded-full border border-maroon/20 bg-cream/90 px-3 py-1.5 transition-colors focus-within:border-maroon/45 focus-within:ring-2 focus-within:ring-maroon/10 xl:w-56 2xl:w-64">
           <Search className="h-4 w-4 shrink-0 text-maroon/70" strokeWidth={1.75} aria-hidden />
           <input
             ref={desktopInputRef}

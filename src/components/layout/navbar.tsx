@@ -59,7 +59,7 @@ export function Navbar() {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
-  const { customer, isLoading: authLoading, logout } = useCustomerAuth();
+  const { customer, isLoading: authLoading, logout, openLogin } = useCustomerAuth();
 
   const closeMobileMenu = () => setMobileOpen(false);
 
@@ -111,9 +111,9 @@ export function Navbar() {
   const likedHydrated = useLikedHydrated();
   const likedCount = useLikedStore((s) => s.items.length);
   const settings = useStoreSettings();
-  const ordersHref = customer ? '/my-orders' : '/login?next=/my-orders';
-  const maskedPhone = customer?.phone
-    ? `+91 ${customer.phone.slice(0, 2)}******${customer.phone.slice(-2)}`
+  const ordersHref = customer ? '/my-orders' : null;
+  const displayPhone = customer?.phone
+    ? `+91 ${customer.phone.replace(/\D/g, '').slice(-10)}`
     : '';
 
   useEffect(() => {
@@ -141,10 +141,10 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full max-w-full overflow-x-hidden">
+    <header className="sticky top-0 z-50 w-full max-w-full">
       {/* Announcement bar — single line; horizontally scrollable when text exceeds width */}
       {showAnnouncement && (
-        <div className="announcement-scroll bg-charcoal-dark text-xs tracking-wide text-white sm:text-sm">
+        <div className="announcement-scroll max-w-full bg-charcoal-dark text-xs tracking-wide text-white sm:text-sm">
           <p className="mx-auto flex w-max min-w-full items-center justify-center gap-x-2 whitespace-nowrap px-3 py-2">
             <span>{announcementMain}</span>
             {announcementSecondary?.trim() ? (
@@ -160,9 +160,9 @@ export function Navbar() {
       )}
 
       {/* Main nav */}
-      <div className="border-b border-maroon/10 bg-cream/98 backdrop-blur-md">
+      <div className="relative z-50 border-b border-maroon/10 bg-cream/98 backdrop-blur-md">
         <nav
-          className="mx-auto flex min-h-[4.5rem] max-w-[90rem] items-center justify-between px-4 py-2 sm:min-h-[5rem] sm:px-6 lg:px-10"
+          className="mx-auto grid min-h-[4.5rem] max-w-[90rem] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2 sm:min-h-[5rem] sm:gap-4 sm:px-6 lg:px-8 xl:gap-6 xl:px-10"
           aria-label="Main navigation"
         >
           <div className="flex min-w-0 items-center gap-3">
@@ -178,15 +178,21 @@ export function Navbar() {
             <BrandLogo variant="navbar" priority onNavigate={closeMobileMenu} />
           </div>
 
-          {/* Desktop nav — center */}
-          <ul className="hidden items-center gap-6 lg:flex xl:gap-8">
+          {/* Desktop nav — center (can shrink; secondary links from xl) */}
+          <ul className="hidden min-w-0 items-center justify-center gap-4 lg:flex xl:gap-6">
             {navLinks.map((link) => (
-              <li key={link.label} className="relative">
+              <li
+                key={link.label}
+                className={cn(
+                  'relative shrink-0',
+                  (link.label === 'ABOUT US' || link.label === 'CONTACT US') && 'hidden xl:block',
+                )}
+              >
                 <Link
                   href={link.href}
                   prefetch
                   className={cn(
-                    'relative flex items-center gap-1 py-1 text-xs font-medium tracking-[0.15em] transition-colors hover:text-maroon',
+                    'relative flex items-center gap-1 py-1 text-[0.7rem] font-medium tracking-[0.12em] transition-colors hover:text-maroon xl:text-xs xl:tracking-[0.15em]',
                     isActive(link.href) ? 'text-maroon' : 'text-charcoal',
                   )}
                 >
@@ -201,12 +207,19 @@ export function Navbar() {
           </ul>
 
           {/* Actions — right */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-3">
             <NavbarSearch onNavigate={closeMobileMenu} />
 
             {/* Desktop profile (Flipkart-style) */}
-            <div className="relative hidden sm:block" ref={profileRef}>
-              {!authLoading && customer ? (
+            <div className="relative z-[60] hidden sm:block" ref={profileRef}>
+              {authLoading && !customer ? (
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-md bg-maroon/5 px-1.5 py-1 text-maroon/50"
+                  aria-hidden
+                >
+                  <UserRound className="h-7 w-7" strokeWidth={1.5} />
+                </span>
+              ) : customer ? (
                 <>
                   <button
                     type="button"
@@ -228,11 +241,11 @@ export function Navbar() {
                   {profileOpen ? (
                     <div
                       role="menu"
-                      className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-lg border border-beige bg-white shadow-lg"
+                      className="absolute right-0 top-full z-[70] mt-2 w-56 rounded-lg border border-beige bg-white shadow-lg"
                     >
                       <div className="border-b border-beige px-4 py-3">
                         <p className="text-sm font-medium text-charcoal">Hello</p>
-                        <p className="mt-0.5 text-xs text-brown-light">{maskedPhone}</p>
+                        <p className="mt-0.5 text-xs text-brown-light">{displayPhone}</p>
                       </div>
                       <div className="py-1">
                         <Link
@@ -274,15 +287,15 @@ export function Navbar() {
                   ) : null}
                 </>
               ) : (
-                <Link
-                  href="/login"
-                  prefetch
+                <button
+                  type="button"
+                  onClick={() => openLogin()}
                   className="inline-flex items-center gap-1.5 rounded-md bg-maroon/5 px-1.5 py-1 text-maroon transition-colors hover:text-maroon-dark"
                   aria-label="Login"
                 >
                   <UserRound className="h-7 w-7" strokeWidth={1.5} />
                   <span className="text-[0.72rem] font-semibold tracking-[0.1em]">LOGIN</span>
-                </Link>
+                </button>
               )}
             </div>
 
@@ -357,18 +370,32 @@ export function Navbar() {
                   );
                 })}
                 <li>
-                  <Link
-                    href={ordersHref}
-                    prefetch
-                    onClick={closeMobileMenu}
-                    className={cn(
-                      'flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium tracking-wider',
-                      pathname === '/my-orders' ? 'bg-maroon/5 text-maroon' : 'text-charcoal',
-                    )}
-                  >
-                    <Package className="h-[1.1rem] w-[1.1rem] shrink-0 text-maroon" strokeWidth={1.75} />
-                    MY ORDERS
-                  </Link>
+                  {ordersHref ? (
+                    <Link
+                      href={ordersHref}
+                      prefetch
+                      onClick={closeMobileMenu}
+                      className={cn(
+                        'flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium tracking-wider',
+                        pathname === '/my-orders' ? 'bg-maroon/5 text-maroon' : 'text-charcoal',
+                      )}
+                    >
+                      <Package className="h-[1.1rem] w-[1.1rem] shrink-0 text-maroon" strokeWidth={1.75} />
+                      MY ORDERS
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeMobileMenu();
+                        openLogin({ next: '/my-orders' });
+                      }}
+                      className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm font-medium tracking-wider text-charcoal"
+                    >
+                      <Package className="h-[1.1rem] w-[1.1rem] shrink-0 text-maroon" strokeWidth={1.75} />
+                      MY ORDERS
+                    </button>
+                  )}
                 </li>
                 <li>
                   <Link
@@ -393,25 +420,42 @@ export function Navbar() {
             </nav>
 
             <div className="border-t border-maroon/10 px-3 py-3">
-              {!authLoading && customer ? (
+              {authLoading && !customer ? (
+                <span className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium tracking-wider text-maroon/40">
+                  <UserRound className="h-[1.1rem] w-[1.1rem] shrink-0" strokeWidth={1.75} />
+                  …
+                </span>
+              ) : customer ? (
                 <button
                   type="button"
                   onClick={askLogout}
-                  className="inline-flex w-full items-center gap-2 rounded-md px-3 py-3 text-left text-sm font-medium tracking-wider text-maroon"
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-maroon/5"
                 >
-                  <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.75} />
-                  LOGOUT
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-maroon/10 text-maroon">
+                    <UserRound className="h-5 w-5" strokeWidth={1.75} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-charcoal">
+                      {displayPhone || 'Account'}
+                    </span>
+                    <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs font-medium tracking-wider text-maroon">
+                      <LogOut className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+                      LOGOUT
+                    </span>
+                  </span>
                 </button>
               ) : (
-                <Link
-                  href="/login"
-                  prefetch
-                  onClick={closeMobileMenu}
-                  className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium tracking-wider text-maroon"
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMobileMenu();
+                    openLogin();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm font-medium tracking-wider text-maroon"
                 >
                   <UserRound className="h-[1.1rem] w-[1.1rem] shrink-0" strokeWidth={1.75} />
                   LOGIN
-                </Link>
+                </button>
               )}
             </div>
           </aside>

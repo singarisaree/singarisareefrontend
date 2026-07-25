@@ -6,6 +6,7 @@ import { CheckCircle2, Clock3, Loader2, ShoppingBag, XCircle } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { formatDate, formatShortOrderNumber, formatTime } from '@/lib/utils';
 import type { OrderPaymentStatus } from '@/lib/order-payment-status';
+import { PAYMENT_FAILED_MESSAGE, PAYMENT_PENDING_MESSAGE } from '@/lib/payment-failure-message';
 
 export function formatEstimatedDeliveryMessage(order: OrderPaymentStatus): string {
   const type = order.deliveryType || 'INDIA';
@@ -138,13 +139,13 @@ export function OrderPaymentSuccessView({
         <CheckCircle2 className="h-9 w-9" strokeWidth={1.5} aria-hidden />
       </motion.div>
       <h1 className="mt-6 font-serif text-3xl text-charcoal">Payment successful</h1>
-      <p className="mt-2 text-brown-light">Thank you — your order is confirmed.</p>
+      <p className="mt-2 text-brown-light">Thank you — your order is placed.</p>
       <OrderNumberBlock orderNumber={order.orderNumber} orderId={orderId} />
       <p className="mt-4 text-left text-sm text-brown-light">
         {formatEstimatedDeliveryMessage(order)}
       </p>
       <p className="mt-2 text-left text-sm text-brown-light">
-        A confirmation will be sent on WhatsApp.
+        Order details will be sent on WhatsApp.
       </p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Link href="/my-orders">
@@ -176,12 +177,7 @@ export function OrderPaymentFailedView({
         <XCircle className="h-9 w-9" strokeWidth={1.5} aria-hidden />
       </div>
       <h1 className="mt-6 font-serif text-3xl text-charcoal">Payment failed</h1>
-      <p className="mt-2 text-brown-light">
-        No amount was charged. You can try again from checkout.
-      </p>
-      <p className="mt-1 text-sm text-brown-light">
-        If any amount was debited, it will be refunded in 3–7 working days.
-      </p>
+      <p className="mt-2 text-brown-light">{PAYMENT_FAILED_MESSAGE}</p>
       {order ? <OrderNumberBlock orderNumber={order.orderNumber} orderId={orderId} /> : null}
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
         <Link href="/checkout">
@@ -212,9 +208,7 @@ export function OrderPaymentPendingView({
         <Clock3 className="h-9 w-9" strokeWidth={1.5} aria-hidden />
       </div>
       <h1 className="mt-6 font-serif text-3xl text-charcoal">Payment pending</h1>
-      <p className="mt-2 text-brown-light">
-        We are confirming your payment with the bank. This usually takes a few seconds.
-      </p>
+      <p className="mt-2 text-brown-light">{PAYMENT_PENDING_MESSAGE}</p>
       <Loader2 className="mx-auto mt-6 h-7 w-7 animate-spin text-gold" aria-hidden />
       {order ? <OrderNumberBlock orderNumber={order.orderNumber} orderId={orderId} /> : null}
       <p className="mt-6 text-sm text-brown-light">

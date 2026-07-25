@@ -19,6 +19,17 @@ const pillars = [
   { icon: Heart, label: 'MADE FOR EVERY YOU' },
 ];
 
+const TELUGU_RE = /[\u0C00-\u0C7F]/;
+const DEFAULT_BRAND_COLOR = '#7a0012';
+const DEFAULT_TITLE_COLOR = '#333333';
+const DEFAULT_SUBTITLE_COLOR = '#7a0012';
+const DEFAULT_BRAND = 'SINGARI SAREES';
+const DEFAULT_SUBTITLE = 'ప్రతి అల్లికలో ఒక కథ';
+
+function hasTelugu(text: string | null | undefined): boolean {
+  return Boolean(text && TELUGU_RE.test(text));
+}
+
 export function HeroSection({ banners }: HeroSectionProps) {
   const activeBanners = banners.filter((banner) => banner.isActive);
   const slides = activeBanners.length > 0 ? activeBanners : banners;
@@ -132,26 +143,48 @@ export function HeroSection({ banners }: HeroSectionProps) {
         {/* Left content — bottom-aligned on mobile so the hero image stays visible */}
         <motion.div
           key={banner?.id || 'fallback'}
-          initial={{ opacity: 0, y: 8 }}
+          initial={false}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
           className="max-w-xl lg:flex-1"
           aria-live="polite"
         >
-          <p className="text-xs font-semibold tracking-[0.3em] text-maroon">SINGARI SAREES</p>
-          <h1 className="mt-3 font-serif text-3xl leading-tight tracking-wide text-charcoal sm:text-4xl lg:text-[2.75rem]">
+          <p
+            className={`text-xs font-semibold tracking-[0.3em] ${
+              hasTelugu(banner?.brandText) ? 'font-telugu' : ''
+            }`}
+            style={{ color: banner?.brandColor || DEFAULT_BRAND_COLOR }}
+            lang={hasTelugu(banner?.brandText) ? 'te' : undefined}
+          >
+            {banner?.brandText || DEFAULT_BRAND}
+          </p>
+          <h1
+            className={`mt-3 text-3xl leading-tight tracking-wide sm:text-4xl lg:text-[2.75rem] ${
+              hasTelugu(banner?.title) ? 'font-telugu font-semibold' : 'font-serif'
+            }`}
+            style={{ color: banner?.titleColor || DEFAULT_TITLE_COLOR }}
+            lang={hasTelugu(banner?.title) ? 'te' : undefined}
+          >
             {banner?.title ? (
               banner.title
             ) : (
               <>
                 WHERE EVERY WEAVE
                 <br />
-                TELLS A <span className="text-maroon">STORY</span>
+                TELLS A STORY
               </>
             )}
           </h1>
-          <p className="mt-3 text-lg text-maroon/80" lang={banner?.subtitle ? undefined : 'te'}>
-            {banner?.subtitle || 'ప్రతి అల్లికలో ఒక కథ'}
+          <p
+            className={`mt-3 text-lg ${
+              hasTelugu(banner?.subtitle) || !banner?.subtitle ? 'font-telugu' : ''
+            }`}
+            style={{ color: banner?.subtitleColor || DEFAULT_SUBTITLE_COLOR }}
+            lang={
+              hasTelugu(banner?.subtitle) || !banner?.subtitle ? 'te' : undefined
+            }
+          >
+            {banner?.subtitle || DEFAULT_SUBTITLE}
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Playfair_Display, Poppins } from 'next/font/google';
+import { Noto_Sans_Telugu, Playfair_Display, Poppins } from 'next/font/google';
 import { cache } from 'react';
 import { Providers } from '@/components/providers';
 import { StorefrontChrome } from '@/components/layout/storefront-chrome';
@@ -26,6 +26,13 @@ const poppins = Poppins({
   display: 'swap',
   adjustFontFallback: true,
   fallback: ['Arial', 'Helvetica', 'sans-serif'],
+});
+
+const notoTelugu = Noto_Sans_Telugu({
+  subsets: ['telugu'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-telugu',
+  display: 'swap',
 });
 
 export const viewport: Viewport = {
@@ -72,10 +79,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const orgLd = organizationJsonLd();
 
   return (
-    <html lang="en" className={`${playfair.variable} ${poppins.variable} ${poppins.className}`}>
+    <html
+      lang="en"
+      className={`${playfair.variable} ${poppins.variable} ${notoTelugu.variable} ${poppins.className}`}
+    >
       <head>
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#fcf9f6" />
         <link rel="preconnect" href={API_ORIGIN} />
         <link rel="dns-prefetch" href={API_ORIGIN} />
         <script

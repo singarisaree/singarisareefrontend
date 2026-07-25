@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   alternates: { canonical: '/' },
 };
 
-export const revalidate = 60;
+export const revalidate = 5;
 
 async function loadHomepageData() {
   try {

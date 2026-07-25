@@ -123,11 +123,11 @@ export const serverStore = {
       'storefront-settings',
     ]),
   getBanners: () =>
-    cached('hero-banners', 30, () => rawGet<HeroBanner[]>('/hero-banners'), ['storefront-banners']),
+    cached('hero-banners', 5, () => rawGet<HeroBanner[]>('/hero-banners'), ['storefront-banners']),
   getHomepage: () =>
     cached(
       'storefront-homepage',
-      30,
+      5,
       () =>
         rawGet<{
           banners: HeroBanner[];

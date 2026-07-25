@@ -17,16 +17,18 @@ const loginSchema = z.object({
   password: z.string().min(8),
 });
 
+type LoginForm = z.infer<typeof loginSchema>;
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: z.infer<typeof loginSchema>) => {
+  const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
       await adminAuthService.login(data.email, data.password);

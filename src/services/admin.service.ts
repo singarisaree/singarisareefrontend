@@ -324,8 +324,12 @@ export const adminCouponService = {
 export const adminBannerService = {
   getAll: () => apiGet<HeroBanner[]>("/hero-banners/all"),
   create: async (data: {
+    brandText?: string;
     title?: string;
     subtitle?: string;
+    brandColor?: string;
+    titleColor?: string;
+    subtitleColor?: string;
     linkUrl?: string;
     sortOrder?: number;
     isActive?: boolean;
@@ -333,8 +337,12 @@ export const adminBannerService = {
     mobileImage?: File;
   }) => {
     const formData = new FormData();
+    if (data.brandText) formData.append("brandText", data.brandText);
     if (data.title) formData.append("title", data.title);
     if (data.subtitle) formData.append("subtitle", data.subtitle);
+    if (data.brandColor) formData.append("brandColor", data.brandColor);
+    if (data.titleColor) formData.append("titleColor", data.titleColor);
+    if (data.subtitleColor) formData.append("subtitleColor", data.subtitleColor);
     if (data.linkUrl) formData.append("linkUrl", data.linkUrl);
     if (data.sortOrder !== undefined)
       formData.append("sortOrder", String(data.sortOrder));
@@ -346,8 +354,17 @@ export const adminBannerService = {
     });
     return response.data.data as HeroBanner;
   },
-  update: (id: string, data: Record<string, unknown>) =>
-    apiPut<HeroBanner>(`/hero-banners/${id}`, data),
+  update: (id: string, data: {
+    brandText?: string | null;
+    title?: string | null;
+    subtitle?: string | null;
+    brandColor?: string | null;
+    titleColor?: string | null;
+    subtitleColor?: string | null;
+    linkUrl?: string | null;
+    sortOrder?: number;
+    isActive?: boolean;
+  }) => apiPut<HeroBanner>(`/hero-banners/${id}`, data),
   delete: (id: string) => apiDelete(`/hero-banners/${id}`),
 };
 

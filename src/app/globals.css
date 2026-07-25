@@ -49,6 +49,10 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.04em;
 }
 
+.font-telugu {
+  font-family: var(--font-telugu), "Noto Sans Telugu", "Gautami", "NTR", sans-serif;
+}
+
 /* Forms/buttons often fall back to the device UI font unless forced */
 button,
 input,

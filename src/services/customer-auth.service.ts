@@ -14,7 +14,7 @@ export const customerAuthService = {
       expiresInSeconds: number;
       resendAfterSeconds?: number;
       debugOtp?: string;
-      channels?: Array<'whatsapp' | 'sms' | 'debug'>;
+      channels?: Array<'sms' | 'debug'>;
     }>('/customer-auth/otp/send', { phone }),
 
   verifyOtp: (data: { phone: string; otp: string; name?: string }) =>

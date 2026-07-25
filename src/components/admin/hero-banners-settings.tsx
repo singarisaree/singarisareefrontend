@@ -13,12 +13,67 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp
 const MAX_IMAGE_SIZE_MB = 10;
 
 const emptyForm = {
+  brandText: '',
   title: '',
   subtitle: '',
+  brandColor: '#7a0012',
+  titleColor: '#333333',
+  subtitleColor: '#7a0012',
   linkUrl: '',
   sortOrder: '0',
   isActive: true,
 };
+
+function TextWithColorField({
+  label,
+  hint,
+  value,
+  color,
+  placeholder,
+  onChangeText,
+  onChangeColor,
+}: {
+  label: string;
+  hint?: string;
+  value: string;
+  color: string;
+  placeholder: string;
+  onChangeText: (text: string) => void;
+  onChangeColor: (color: string) => void;
+}) {
+  return (
+    <div className="space-y-2 sm:col-span-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <label className="text-sm font-medium text-[#334155]">{label}</label>
+        {hint ? <span className="text-xs text-[#94a3b8]">{hint}</span> : null}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          value={value}
+          onChange={(e) => onChangeText(e.target.value)}
+          placeholder={placeholder}
+          lang="te"
+          className="h-10 min-w-0 flex-1 rounded-lg border border-[#e2e8f0] px-3 text-sm focus:border-[#0f172a] focus:outline-none"
+        />
+        <input
+          type="color"
+          value={color}
+          onChange={(e) => onChangeColor(e.target.value)}
+          className="h-10 w-12 shrink-0 cursor-pointer rounded border border-[#e2e8f0] bg-white p-1"
+          aria-label={`${label} color`}
+          title="Font color"
+        />
+        <input
+          value={color}
+          onChange={(e) => onChangeColor(e.target.value)}
+          placeholder="#333333"
+          className="h-10 w-[6.5rem] shrink-0 rounded-lg border border-[#e2e8f0] px-2 font-mono text-xs focus:border-[#0f172a] focus:outline-none"
+          aria-label={`${label} color hex`}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function HeroBannersSettings() {
   const queryClient = useQueryClient();
@@ -46,19 +101,23 @@ export function HeroBannersSettings() {
     mutationFn: () => {
       if (!imageFile) throw new Error('Image required');
       return adminBannerService.create({
+        brandText: form.brandText.trim() || undefined,
         title: form.title.trim() || undefined,
         subtitle: form.subtitle.trim() || undefined,
+        brandColor: form.brandColor.trim() || undefined,
+        titleColor: form.titleColor.trim() || undefined,
+        subtitleColor: form.subtitleColor.trim() || undefined,
         linkUrl: form.linkUrl.trim() || undefined,
         sortOrder: Number(form.sortOrder) || 0,
         isActive: form.isActive,
         image: imageFile,
       });
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Hero banner added');
       resetForm();
-      void refreshStorefrontAfterBannerChange();
-      queryClient.invalidateQueries({ queryKey: ['admin-banners'] });
+      await refreshStorefrontAfterBannerChange();
+      await queryClient.invalidateQueries({ queryKey: ['admin-banners'] });
     },
     onError: () => toast.error('Failed to add hero banner'),
   });
@@ -67,29 +126,33 @@ export function HeroBannersSettings() {
     mutationFn: () => {
       if (!editingId) throw new Error('No banner selected');
       return adminBannerService.update(editingId, {
-        title: form.title.trim() || undefined,
-        subtitle: form.subtitle.trim() || undefined,
-        linkUrl: form.linkUrl.trim() || undefined,
+        brandText: form.brandText.trim() || null,
+        title: form.title.trim() || null,
+        subtitle: form.subtitle.trim() || null,
+        brandColor: form.brandColor.trim() || null,
+        titleColor: form.titleColor.trim() || null,
+        subtitleColor: form.subtitleColor.trim() || null,
+        linkUrl: form.linkUrl.trim() || null,
         sortOrder: Number(form.sortOrder) || 0,
         isActive: form.isActive,
       });
     },
-    onSuccess: () => {
-      toast.success('Hero banner updated');
+    onSuccess: async () => {
+      toast.success('Hero banner updated — homepage will refresh');
       resetForm();
-      void refreshStorefrontAfterBannerChange();
-      queryClient.invalidateQueries({ queryKey: ['admin-banners'] });
+      await refreshStorefrontAfterBannerChange();
+      await queryClient.invalidateQueries({ queryKey: ['admin-banners'] });
     },
     onError: () => toast.error('Failed to update hero banner'),
   });
 
   const deleteBanner = useMutation({
     mutationFn: (id: string) => adminBannerService.delete(id),
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success('Hero banner deleted');
       if (editingId) resetForm();
-      void refreshStorefrontAfterBannerChange();
-      queryClient.invalidateQueries({ queryKey: ['admin-banners'] });
+      await refreshStorefrontAfterBannerChange();
+      await queryClient.invalidateQueries({ queryKey: ['admin-banners'] });
     },
     onError: () => toast.error('Failed to delete hero banner'),
   });
@@ -113,8 +176,12 @@ export function HeroBannersSettings() {
   const startEdit = (banner: HeroBanner) => {
     setEditingId(banner.id);
     setForm({
+      brandText: banner.brandText || '',
       title: banner.title || '',
       subtitle: banner.subtitle || '',
+      brandColor: banner.brandColor || '#7a0012',
+      titleColor: banner.titleColor || '#333333',
+      subtitleColor: banner.subtitleColor || '#7a0012',
       linkUrl: banner.linkUrl || '',
       sortOrder: String(banner.sortOrder),
       isActive: banner.isActive,
@@ -123,6 +190,7 @@ export function HeroBannersSettings() {
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setImagePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const onSubmit = (e: React.FormEvent) => {
@@ -139,6 +207,10 @@ export function HeroBannersSettings() {
   };
 
   const isPending = createBanner.isPending || updateBanner.isPending;
+  const previewBrand = form.brandText.trim();
+  const previewTitle = form.title.trim();
+  const previewSubtitle = form.subtitle.trim();
+  const hasPreview = Boolean(previewBrand || previewTitle || previewSubtitle);
 
   return (
     <div className="space-y-6">
@@ -148,35 +220,45 @@ export function HeroBannersSettings() {
             {editingId ? 'Update Hero Banner' : 'Add Hero Banner'}
           </h2>
           <p className="mt-1 text-sm text-[#64748b]">
-            Homepage slider images. Recommended size: 1920×800 or similar wide format.
+            Three text lines (top, middle, bottom) with a font color on the right of each.
+            Recommended size: 1920×800.
           </p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[#334155]">Title</label>
-            <input
-              value={form.title}
-              onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="e.g. Festive Collection"
-              className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 text-sm focus:border-[#0f172a] focus:outline-none"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[#334155]">Subtitle</label>
-            <input
-              value={form.subtitle}
-              onChange={(e) => setForm((prev) => ({ ...prev, subtitle: e.target.value }))}
-              placeholder="Optional subtitle"
-              className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 text-sm focus:border-[#0f172a] focus:outline-none"
-            />
-          </div>
+          <TextWithColorField
+            label="Top text"
+            hint="Brand line"
+            value={form.brandText}
+            color={form.brandColor}
+            placeholder=""
+            onChangeText={(brandText) => setForm((prev) => ({ ...prev, brandText }))}
+            onChangeColor={(brandColor) => setForm((prev) => ({ ...prev, brandColor }))}
+          />
+          <TextWithColorField
+            label="Middle text"
+            hint="Headline"
+            value={form.title}
+            color={form.titleColor}
+            placeholder=""
+            onChangeText={(title) => setForm((prev) => ({ ...prev, title }))}
+            onChangeColor={(titleColor) => setForm((prev) => ({ ...prev, titleColor }))}
+          />
+          <TextWithColorField
+            label="Bottom text"
+            hint="Tagline"
+            value={form.subtitle}
+            color={form.subtitleColor}
+            placeholder=""
+            onChangeText={(subtitle) => setForm((prev) => ({ ...prev, subtitle }))}
+            onChangeColor={(subtitleColor) => setForm((prev) => ({ ...prev, subtitleColor }))}
+          />
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-[#334155]">Link URL</label>
             <input
               value={form.linkUrl}
               onChange={(e) => setForm((prev) => ({ ...prev, linkUrl: e.target.value }))}
-              placeholder="/collections"
               className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 text-sm focus:border-[#0f172a] focus:outline-none"
             />
           </div>
@@ -192,6 +274,47 @@ export function HeroBannersSettings() {
           </div>
         </div>
 
+        {hasPreview ? (
+          <div
+            className="rounded-xl border border-[#e2e8f0] p-4"
+            style={{
+              background:
+                'linear-gradient(135deg, rgba(122,0,18,0.08), rgba(197,160,89,0.12))',
+            }}
+          >
+            <p className="text-[0.65rem] font-semibold tracking-[0.25em] text-[#7a0012]">
+              PREVIEW
+            </p>
+            {previewBrand ? (
+              <p
+                className="mt-3 text-xs font-semibold tracking-[0.3em]"
+                style={{ color: form.brandColor }}
+                lang="te"
+              >
+                {previewBrand}
+              </p>
+            ) : null}
+            {previewTitle ? (
+              <p
+                className="mt-2 font-serif text-2xl leading-tight"
+                style={{ color: form.titleColor }}
+                lang="te"
+              >
+                {previewTitle}
+              </p>
+            ) : null}
+            {previewSubtitle ? (
+              <p
+                className="mt-2 font-telugu text-base"
+                style={{ color: form.subtitleColor }}
+                lang="te"
+              >
+                {previewSubtitle}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <label className="flex items-center gap-2 text-sm text-[#334155]">
           <input
             type="checkbox"
@@ -206,9 +329,17 @@ export function HeroBannersSettings() {
           <div className="flex flex-wrap items-start gap-4">
             <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-[#e2e8f0] bg-[#f8fafc]">
               {imagePreview ? (
-                <OptimizedImage src={imagePreview} alt="Banner preview" fill sizes="10rem" className="object-cover" />
+                <OptimizedImage
+                  src={imagePreview}
+                  alt="Banner preview"
+                  fill
+                  sizes="10rem"
+                  className="object-cover"
+                />
               ) : (
-                <div className="flex h-full items-center justify-center text-xs text-[#94a3b8]">No image</div>
+                <div className="flex h-full items-center justify-center text-xs text-[#94a3b8]">
+                  No image
+                </div>
               )}
             </div>
             <div>
@@ -261,16 +392,46 @@ export function HeroBannersSettings() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {banners.map((banner: HeroBanner) => (
-              <div key={banner.id} className="overflow-hidden rounded-xl border border-[#e2e8f0] bg-white shadow-sm">
+              <div
+                key={banner.id}
+                className="overflow-hidden rounded-xl border border-[#e2e8f0] bg-white shadow-sm"
+              >
                 <div className="relative aspect-[16/9]">
-                  <OptimizedImage src={banner.imageUrl} alt={banner.title || 'Banner'} fill sizes="(max-width: 640px) 50vw, 320px" className="object-cover" />
+                  <OptimizedImage
+                    src={banner.imageUrl}
+                    alt={banner.title || banner.brandText || 'Banner'}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 320px"
+                    className="object-cover"
+                  />
                 </div>
                 <div className="space-y-3 p-4">
                   <div>
-                    <p className="font-semibold text-[#0f172a]">{banner.title || 'Untitled'}</p>
-                    {banner.subtitle && (
-                      <p className="mt-1 text-xs text-[#64748b]">{banner.subtitle}</p>
-                    )}
+                    {banner.brandText ? (
+                      <p
+                        className="text-[0.65rem] font-semibold tracking-[0.2em]"
+                        style={{ color: banner.brandColor || '#7a0012' }}
+                        lang="te"
+                      >
+                        {banner.brandText}
+                      </p>
+                    ) : null}
+                    <p
+                      className="font-semibold"
+                      style={{ color: banner.titleColor || '#0f172a' }}
+                      lang="te"
+                    >
+                      {banner.title || 'Untitled'}
+                    </p>
+                    {banner.subtitle ? (
+                      <p
+                        className="mt-1 text-xs"
+                        style={{ color: banner.subtitleColor || '#64748b' }}
+                        lang="te"
+                      >
+                        {banner.subtitle}
+                      </p>
+                    ) : null}
                     <p className="mt-1 text-xs text-[#94a3b8]">Sort: {banner.sortOrder}</p>
                   </div>
                   <StatusBadge variant={banner.isActive ? 'active' : 'inactive'}>

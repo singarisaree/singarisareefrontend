@@ -8,6 +8,7 @@ import {
   isOrderPaymentFailed,
   isOrderPaymentSuccess,
   orderPaymentReturnQueryOptions,
+  type OrderPaymentStatus,
 } from '@/lib/order-payment-status';
 import { orderPaymentResultHref } from '@/lib/order-payment-routes';
 import {
@@ -23,40 +24,63 @@ function SuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const orderId = searchParams.get('order_id');
+  const alreadyVerified = searchParams.get('verified') === '1';
   const clearCart = useCartStore((s) => s.clearCart);
   const pendingSinceRef = useRef<number | null>(null);
+  const clearedRef = useRef(false);
 
   const { data: orderData, isLoading } = useQuery(orderPaymentReturnQueryOptions(orderId));
 
   useEffect(() => {
-    if (!orderData || !orderId) return;
-    if (isOrderPaymentSuccess(orderData)) {
+    if (!orderId) return;
+    const paid = alreadyVerified || (orderData && isOrderPaymentSuccess(orderData));
+    if (paid && !clearedRef.current) {
+      clearedRef.current = true;
       clearCart();
       pendingSinceRef.current = null;
       return;
     }
+    if (!orderData) return;
     if (isOrderPaymentFailed(orderData)) {
+      if (alreadyVerified) return;
       router.replace(orderPaymentResultHref(orderId, 'failed'));
       return;
     }
-    // Still confirming — keep polling on this page for a short grace period.
+    if (alreadyVerified || isOrderPaymentSuccess(orderData)) return;
     if (pendingSinceRef.current == null) pendingSinceRef.current = Date.now();
     if (Date.now() - pendingSinceRef.current >= PENDING_GRACE_MS) {
       router.replace(orderPaymentResultHref(orderId, 'pending'));
     }
-  }, [orderData, orderId, clearCart, router]);
+  }, [orderData, orderId, clearCart, router, alreadyVerified]);
 
   if (!orderId) return <OrderPaymentMissing />;
-  if (isLoading || !orderData) return <OrderPaymentLoading />;
-  if (!isOrderPaymentSuccess(orderData)) {
-    return <OrderPaymentLoading title="Confirming your payment" />;
+
+  const optimisticOrder: OrderPaymentStatus = {
+    status: 'PLACED',
+    paymentStatus: 'SUCCESS',
+    orderNumber: orderId,
+  };
+
+  // Checkout already verified with Razorpay — show success immediately (no second "Confirming" wait).
+  if (alreadyVerified || (orderData && isOrderPaymentSuccess(orderData))) {
+    return (
+      <OrderPaymentSuccessView
+        orderId={orderId}
+        order={orderData && isOrderPaymentSuccess(orderData) ? orderData : optimisticOrder}
+      />
+    );
   }
-  return <OrderPaymentSuccessView orderId={orderId} order={orderData} />;
+
+  if (isLoading || !orderData) {
+    return <OrderPaymentLoading title="Loading your order" />;
+  }
+
+  return <OrderPaymentLoading title="Confirming your payment" />;
 }
 
 export default function OrderSuccessPage() {
   return (
-    <Suspense fallback={<OrderPaymentLoading />}>
+    <Suspense fallback={<OrderPaymentLoading title="Loading your order" />}>
       <SuccessContent />
     </Suspense>
   );

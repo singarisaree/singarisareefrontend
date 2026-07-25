@@ -15,14 +15,15 @@ const variantConfig = {
     src: '/logo-navbar.png',
     width: 1024,
     height: 487,
+    // Cap width so the intrinsic 1024px asset cannot force horizontal page scroll.
     className:
-      'h-[2.75rem] w-auto sm:h-[3.25rem] md:h-[3.75rem] lg:h-[4.25rem]',
+      'h-[2.75rem] w-auto max-w-[9.5rem] sm:h-[3.25rem] sm:max-w-[11rem] md:h-[3.75rem] md:max-w-[12rem] lg:h-[4.25rem] lg:max-w-[13rem]',
   },
   footer: {
     src: '/logo-navbar.png',
     width: 1024,
     height: 487,
-    className: 'h-[4rem] w-auto sm:h-[4.75rem] md:h-[5.25rem]',
+    className: 'h-[4rem] w-auto max-w-[14rem] sm:h-[4.75rem] sm:max-w-[16rem] md:h-[5.25rem] md:max-w-[18rem]',
   },
 } as const;
 
@@ -43,7 +44,7 @@ export function BrandLogo({
       height={config.height}
       priority={priority}
       sizes="(max-width: 768px) 11rem, 13rem"
-      className={cn('max-w-none object-contain object-left', config.className, className)}
+      className={cn('object-contain object-left', config.className, className)}
     />
   );
 

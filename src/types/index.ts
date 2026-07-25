@@ -74,11 +74,15 @@ export interface Product {
 
 export interface HeroBanner {
   id: string;
-  title?: string;
-  subtitle?: string;
+  brandText?: string | null;
+  title?: string | null;
+  subtitle?: string | null;
+  brandColor?: string | null;
+  titleColor?: string | null;
+  subtitleColor?: string | null;
   imageUrl: string;
   mobileImageUrl?: string;
-  linkUrl?: string;
+  linkUrl?: string | null;
   sortOrder: number;
   isActive: boolean;
 }

@@ -7,12 +7,17 @@ import { refreshStorefrontCacheFromRealtime } from '@/actions/revalidate-storefr
 import { getRealtimeSocket } from '@/lib/socket-client';
 import { REALTIME_EVENTS } from '@/lib/realtime-events';
 
-const FOCUS_REFRESH_INTERVAL_MS = 8_000;
+const FOCUS_REFRESH_INTERVAL_MS = 30_000;
+/** Ignore focus/visibility right after load — those fire on refresh and cause a blank blink. */
+const MOUNT_GRACE_MS = 4_000;
 
 /**
  * Soft-refreshes storefront when:
- * - shopper returns to the tab, or
+ * - shopper returns to the tab (after grace period), or
  * - admin changes products/stock/categories/banners/settings (catalog:changed socket).
+ *
+ * Does NOT refresh on hard reload / first paint — that already has fresh HTML and
+ * calling router.refresh() replaces the page with loading UI (blank blink).
  */
 export function StorefrontLiveRefresh() {
   const router = useRouter();
@@ -20,9 +25,15 @@ export function StorefrontLiveRefresh() {
   const queryClient = useQueryClient();
   const lastFocusRefreshAt = useRef(0);
   const refreshInFlight = useRef(false);
+  const mountedAt = useRef(0);
 
   useEffect(() => {
+    mountedAt.current = Date.now();
+
+    const withinMountGrace = () => Date.now() - mountedAt.current < MOUNT_GRACE_MS;
+
     const refreshFromFocus = () => {
+      if (withinMountGrace()) return;
       const now = Date.now();
       if (now - lastFocusRefreshAt.current < FOCUS_REFRESH_INTERVAL_MS) return;
       lastFocusRefreshAt.current = now;
@@ -48,9 +59,14 @@ export function StorefrontLiveRefresh() {
       if (document.visibilityState === 'visible') refreshFromFocus();
     };
 
+    // Only revalidate when restored from back/forward cache — not on normal load.
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) refreshFromFocus();
+    };
+
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', refreshFromFocus);
-    window.addEventListener('pageshow', refreshFromFocus);
+    window.addEventListener('pageshow', onPageShow);
 
     const socket = getRealtimeSocket();
     socket?.on(REALTIME_EVENTS.CATALOG_CHANGED, refreshFromRealtime);
@@ -58,7 +74,7 @@ export function StorefrontLiveRefresh() {
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('focus', refreshFromFocus);
-      window.removeEventListener('pageshow', refreshFromFocus);
+      window.removeEventListener('pageshow', onPageShow);
       socket?.off(REALTIME_EVENTS.CATALOG_CHANGED, refreshFromRealtime);
     };
   }, [router, queryClient, pathname]);

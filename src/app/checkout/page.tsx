@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { CheckoutSkeleton } from '@/components/storefront/page-skeletons';
 import { CountrySelect } from '@/components/checkout/country-select';
+import { CheckoutLoginDialog } from '@/components/checkout/checkout-login-dialog';
 import { useCartStore } from '@/stores/cart-store';
 import { orderService } from '@/services/store.service';
 import { formatPrice, formatColorLabel, formatCouponDiscountLabel } from '@/lib/utils';
@@ -43,11 +44,12 @@ import { useCartSync } from '@/hooks/use-cart-sync';
 import { useCouponSync } from '@/hooks/use-coupon-sync';
 import { detectUserAddress, getLocationErrorMessage } from '@/lib/detect-location';
 import { openRazorpayCheckout, preloadRazorpayScript } from '@/lib/razorpay-checkout';
-import { orderPaymentResultHref } from '@/lib/order-payment-routes';
 import {
-  PaymentStatusOverlay,
-  type PaymentOverlayPhase,
-} from '@/components/orders/payment-status-overlay';
+  OrderPaymentResultDialog,
+  type OrderPaymentDialogState,
+} from '@/components/orders/order-payment-result-dialog';
+import type { PaymentResultOutcome } from '@/lib/order-payment-routes';
+import { formatPaymentFailureMessage } from '@/lib/payment-failure-message';
 import { useCustomerAuth } from '@/components/customer-auth-provider';
 
 const checkoutSchema = z
@@ -227,7 +229,10 @@ export default function CheckoutPage() {
   );
   const cartHydrated = useCartHydrated();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [paymentPhase, setPaymentPhase] = useState<PaymentOverlayPhase>(null);
+  const [paymentResult, setPaymentResult] = useState<OrderPaymentDialogState | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const pendingCheckoutRef = useRef<CheckoutForm | null>(null);
+  const autoPayStartedRef = useRef(false);
   const clearCart = useCartStore((s) => s.clearCart);
   const [couponInput, setCouponInput] = useState(couponCode || '');
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
@@ -267,32 +272,10 @@ export default function CheckoutPage() {
   const settings = usePublicSettings();
   const isLoggedIn = Boolean(customer);
 
-  // After login redirect, jump to the pay button (mobile lands at page top otherwise).
-  useEffect(() => {
-    if (authLoading || !isLoggedIn) return;
-    let shouldFocus = false;
-    try {
-      shouldFocus = sessionStorage.getItem('checkout_focus_pay') === '1';
-      if (shouldFocus) sessionStorage.removeItem('checkout_focus_pay');
-    } catch {
-      shouldFocus = false;
-    }
-    if (!shouldFocus) return;
-
-    const timer = window.setTimeout(() => {
-      document.getElementById('checkout-pay')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }, 200);
-    return () => window.clearTimeout(timer);
-  }, [authLoading, isLoggedIn]);
-
   useEffect(() => {
     void preloadRazorpayScript();
-    router.prefetch('/order/success');
-    router.prefetch('/order/failed');
-    router.prefetch('/order/pending');
+    router.prefetch('/my-orders');
+    router.prefetch('/collections');
   }, [router]);
 
   useEffect(() => {
@@ -770,7 +753,7 @@ export default function CheckoutPage() {
     }
   };
 
-  const onSubmit = async (data: CheckoutForm) => {
+  const runPayment = async (data: CheckoutForm) => {
     if (isSubmitting) return;
 
     if (!canProceedToPayment) {
@@ -782,21 +765,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!isLoggedIn) {
-      writeCheckoutDraft({
-        ...data,
-        deliveryCoordinates,
-      });
-      try {
-        sessionStorage.setItem('checkout_focus_pay', '1');
-      } catch {
-        // ignore
-      }
-      toast.info('Please login to continue');
-      router.push('/login?next=/checkout');
-      return;
-    }
-
     if (!isValidPostalCode(data.postalCode, selectedCountry)) {
       toast.error(postalValidation.message);
       focusCheckoutField('postalCode');
@@ -805,8 +773,6 @@ export default function CheckoutPage() {
 
     setIsSubmitting(true);
     const needsGateway = grandTotal > 0;
-    setPaymentPhase('processing');
-    // SDK is preloaded on mount; kick again in case the first load failed.
     const sdkReady = needsGateway ? preloadRazorpayScript() : Promise.resolve();
     let createdOrderNumber: string | null = null;
     try {
@@ -840,6 +806,7 @@ export default function CheckoutPage() {
             quantity: i.quantity,
           })),
           couponCode: couponCode || undefined,
+          expectedGrandTotal: grandTotal,
         }),
         sdkReady,
       ]);
@@ -853,7 +820,8 @@ export default function CheckoutPage() {
       if (result.paymentRequired === false) {
         clearCheckoutDraft();
         clearCart();
-        router.replace(orderPaymentResultHref(orderNumber, 'success'));
+        setIsSubmitting(false);
+        setPaymentResult({ orderId: orderNumber, outcome: 'success', verified: true });
         return;
       }
 
@@ -861,8 +829,6 @@ export default function CheckoutPage() {
         throw new Error('Payment session was not created');
       }
 
-      // Open Razorpay immediately — no extra status round-trip on a fresh order.
-      setPaymentPhase('checkout');
       const payResult = await openRazorpayCheckout({
         keyId: result.keyId,
         razorpayOrderId: result.razorpayOrderId,
@@ -872,42 +838,50 @@ export default function CheckoutPage() {
         customerName: data.customerName,
         customerEmail: data.customerEmail,
         customerPhone: phone,
-        onVerifying: () => setPaymentPhase('processing'),
+        onVerifyFailed: (reason) => {
+          setPaymentResult({
+            orderId: orderNumber,
+            outcome: 'failed',
+            reason: formatPaymentFailureMessage(reason),
+          });
+        },
       });
 
       if (payResult.status === 'paid') {
         clearCheckoutDraft();
         clearCart();
-        router.replace(orderPaymentResultHref(orderNumber, 'success'));
+        setIsSubmitting(false);
+        setPaymentResult({ orderId: orderNumber, outcome: 'success', verified: true });
         return;
       }
       if (payResult.status === 'failed') {
-        // Transaction was attempted — mark failed (visible), do not soft-delete/abandon.
         void orderService
           .reportPaymentFailed(orderNumber, payResult.reason)
           .catch(() => undefined);
         clearCheckoutDraft();
-        router.replace(orderPaymentResultHref(orderNumber, 'failed'));
+        setIsSubmitting(false);
+        setPaymentResult({
+          orderId: orderNumber,
+          outcome: 'failed',
+          reason: formatPaymentFailureMessage(payResult.reason),
+        });
         return;
       }
       if (payResult.status === 'verify_pending') {
         clearCheckoutDraft();
         clearCart();
-        router.replace(orderPaymentResultHref(orderNumber, 'pending'));
+        setIsSubmitting(false);
+        setPaymentResult({ orderId: orderNumber, outcome: 'pending' });
         return;
       }
 
-      // Abandoned: user closed Razorpay without initiating a payment.
       void orderService.abandonCheckout(orderNumber).catch(() => undefined);
-      setPaymentPhase(null);
       setIsSubmitting(false);
       toast.info('Payment cancelled. You can try again whenever you are ready.');
     } catch (error) {
       if (createdOrderNumber) {
-        // Payment UI never completed a transaction — treat like abandon.
         void orderService.abandonCheckout(createdOrderNumber).catch(() => undefined);
       }
-      setPaymentPhase(null);
       const message =
         isAxiosError(error) && typeof error.response?.data?.message === 'string'
           ? error.response.data.message
@@ -916,6 +890,67 @@ export default function CheckoutPage() {
       setIsSubmitting(false);
     }
   };
+
+  const onSubmit = async (data: CheckoutForm) => {
+    if (isSubmitting) return;
+
+    if (!canProceedToPayment) {
+      toast.error(
+        shippingStatus === 'unavailable'
+          ? 'Delivery is not available for this location.'
+          : 'Please wait for a valid shipping quote before payment.',
+      );
+      return;
+    }
+
+    // Wait for session check — avoid showing login if already logged in.
+    if (authLoading) {
+      toast.info('Checking login…');
+      return;
+    }
+
+    // Already logged in → open payment gateway directly (no login dialog).
+    if (isLoggedIn) {
+      await runPayment(data);
+      return;
+    }
+
+    writeCheckoutDraft({
+      ...data,
+      deliveryCoordinates,
+    });
+    pendingCheckoutRef.current = data;
+    setLoginOpen(true);
+  };
+
+  const onCheckoutLoginVerified = () => {
+    const data = pendingCheckoutRef.current ?? getValues();
+    pendingCheckoutRef.current = null;
+    autoPayStartedRef.current = true;
+    void runPayment(data);
+  };
+
+  // After full-page /login?next=/checkout return, start payment automatically.
+  useEffect(() => {
+    if (authLoading || !isLoggedIn || isSubmitting || autoPayStartedRef.current) return;
+    let shouldAutoPay = false;
+    try {
+      shouldAutoPay = sessionStorage.getItem('checkout_auto_pay') === '1';
+      if (shouldAutoPay) sessionStorage.removeItem('checkout_auto_pay');
+      sessionStorage.removeItem('checkout_focus_pay');
+    } catch {
+      shouldAutoPay = false;
+    }
+    if (!shouldAutoPay) return;
+    autoPayStartedRef.current = true;
+    const timer = window.setTimeout(() => {
+      void handleSubmit((data) => {
+        void runPayment(data);
+      })();
+    }, 100);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot after login return
+  }, [authLoading, isLoggedIn]);
 
   const handleDetectLocation = async () => {
     setLocationError(null);
@@ -1013,11 +1048,7 @@ export default function CheckoutPage() {
     return <CheckoutSkeleton />;
   }
 
-  if (items.length === 0 && paymentPhase) {
-    return <PaymentStatusOverlay phase={paymentPhase} />;
-  }
-
-  if (items.length === 0) {
+  if (items.length === 0 && !paymentResult) {
     return (
       <div className="mx-auto box-border flex min-h-[50vh] w-full max-w-7xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
         <ShoppingBag className="h-16 w-16 text-gold/40" strokeWidth={1.25} aria-hidden />
@@ -1036,8 +1067,9 @@ export default function CheckoutPage() {
 
   return (
     <>
+      {items.length > 0 ? (
       <div className="mx-auto box-border w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <h1 className="font-serif text-3xl text-charcoal">Checkout</h1>
+        <h1 className="hidden font-serif text-3xl text-charcoal sm:block">Checkout</h1>
         <button
           type="button"
           onClick={() => router.back()}
@@ -1148,8 +1180,19 @@ export default function CheckoutPage() {
                           inputMode="numeric"
                           autoComplete="tel-national"
                           placeholder={isIndia ? '10-digit mobile' : 'Phone number'}
+                          maxLength={isIndia ? 10 : 15}
                           readOnly={isLoggedIn}
-                          {...register('customerPhone')}
+                          {...register('customerPhone', {
+                            onChange: (e) => {
+                              const max = isIndia ? 10 : 15;
+                              const digits = e.target.value.replace(/\D/g, '').slice(0, max);
+                              e.target.value = digits;
+                              setValue('customerPhone', digits, {
+                                shouldValidate: true,
+                                shouldDirty: true,
+                              });
+                            },
+                          })}
                         />
                       </div>
                       {isLoggedIn ? (
@@ -1514,9 +1557,7 @@ export default function CheckoutPage() {
                     disabled={isSubmitting || authLoading || !canProceedToPayment}
                   >
                     {isSubmitting
-                      ? paymentPhase === 'checkout'
-                        ? 'Complete payment…'
-                        : 'Processing…'
+                      ? 'Processing…'
                       : shippingStatus === 'unavailable'
                         ? 'Delivery unavailable'
                         : !isLoggedIn
@@ -1538,41 +1579,33 @@ export default function CheckoutPage() {
                 </section>
               </div>
         </form>
-
-        {/* Mobile: always-visible pay CTA so users aren't stuck at page top after login */}
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gold/20 bg-cream/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm lg:hidden">
-          <div className="mx-auto flex max-w-7xl items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs text-brown-light">Grand total</p>
-              <p className="truncate text-base font-semibold text-charcoal">
-                {formatPrice(grandTotal)}
-              </p>
-            </div>
-            <Button
-              type="submit"
-              form="checkout-form"
-              variant="gold"
-              size="lg"
-              className="shrink-0 px-5"
-              disabled={isSubmitting || authLoading || !canProceedToPayment}
-            >
-              {isSubmitting
-                ? paymentPhase === 'checkout'
-                  ? 'Pay…'
-                  : '…'
-                : shippingStatus === 'unavailable'
-                  ? 'Unavailable'
-                  : !isLoggedIn
-                    ? 'Login & Pay'
-                    : grandTotal <= 0
-                      ? 'Place Order'
-                      : 'Proceed to Payment'}
-            </Button>
-          </div>
-        </div>
-        <div className="h-24 lg:hidden" aria-hidden />
       </div>
-      <PaymentStatusOverlay phase={paymentPhase} />
+      ) : (
+        <div className="mx-auto flex min-h-[50vh] max-w-7xl items-center justify-center px-4 py-16 text-center">
+          <p className="font-serif text-2xl text-charcoal">Order update</p>
+        </div>
+      )}
+      <OrderPaymentResultDialog
+        state={paymentResult}
+        onOpenChange={(open) => {
+          if (!open) {
+            const wasSuccess = paymentResult?.outcome === 'success';
+            setPaymentResult(null);
+            if (wasSuccess) {
+              router.replace('/my-orders');
+            }
+          }
+        }}
+        onOutcomeChange={(outcome: PaymentResultOutcome) => {
+          setPaymentResult((prev) => (prev ? { ...prev, outcome } : prev));
+        }}
+      />
+      <CheckoutLoginDialog
+        open={loginOpen && !isLoggedIn}
+        onOpenChange={setLoginOpen}
+        initialPhone={watchedCustomerPhone || ''}
+        onVerified={onCheckoutLoginVerified}
+      />
     </>
   );
 }

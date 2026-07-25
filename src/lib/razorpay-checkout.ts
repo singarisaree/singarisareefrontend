@@ -63,6 +63,8 @@ export type OpenRazorpayCheckoutInput = {
   onSuccess?: () => void | Promise<void>;
   onDismiss?: () => void;
   onFailed?: (reason?: string) => void;
+  /** Called if background verify fails after gateway success (rare). */
+  onVerifyFailed?: (reason?: string) => void;
 };
 
 export type RazorpayPayResult =
@@ -120,7 +122,10 @@ function normalizePhone(phone?: string) {
 export async function openRazorpayCheckout(
   input: OpenRazorpayCheckoutInput,
 ): Promise<RazorpayPayResult> {
-  await preloadRazorpayScript();
+  // Script is usually already warm from checkout layout / preload — only wait if needed.
+  if (!window.Razorpay) {
+    await preloadRazorpayScript();
+  }
 
   const RazorpayCtor = window.Razorpay;
   if (!RazorpayCtor) throw new Error('Payment SDK failed to load');
@@ -169,34 +174,30 @@ export async function openRazorpayCheckout(
         if (settled) return;
         input.onVerifying?.();
 
-        void (async () => {
-          try {
-            // Server verifies Razorpay HMAC signature before confirming payment.
-            await orderService.verifyPayment({
-              orderNumber: input.orderNumber,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            });
-            await input.onSuccess?.();
-            finish({ status: 'paid' });
-          } catch (error) {
+        // Instant UX: gateway already succeeded — unlock UI immediately.
+        // HMAC verify runs in parallel; webhook heals if the request drops.
+        finish({ status: 'paid' });
+        void input.onSuccess?.();
+
+        void orderService
+          .verifyPayment({
+            orderNumber: input.orderNumber,
+            razorpayOrderId: response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature,
+          })
+          .catch((error) => {
             if (isAxiosError(error)) {
               const status = error.response?.status;
               if (status && status >= 400 && status < 500) {
                 const message = (error.response?.data as { message?: string } | undefined)
                   ?.message;
-                finish({
-                  status: 'failed',
-                  reason: message || 'Payment verification failed',
-                });
+                input.onVerifyFailed?.(message || 'Payment verification failed');
                 return;
               }
             }
-            // Network / 5xx — payment may still be valid; status page reconciles.
-            finish({ status: 'verify_pending' });
-          }
-        })();
+            // Network blip — status polling / webhook will confirm.
+          });
       },
     });
 
@@ -207,6 +208,7 @@ export async function openRazorpayCheckout(
       finish({ status: 'failed', reason });
     });
 
+    // Open immediately — no extra rAF delay.
     rzp.open();
   });
 }

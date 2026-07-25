@@ -3,7 +3,7 @@
 import { Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export type PaymentOverlayPhase = 'processing' | 'checkout' | null;
+export type PaymentOverlayPhase = 'processing' | 'checkout' | 'verifying' | null;
 
 const COPY: Record<Exclude<PaymentOverlayPhase, null>, { title: string; subtitle: string }> = {
   processing: {
@@ -13,6 +13,10 @@ const COPY: Record<Exclude<PaymentOverlayPhase, null>, { title: string; subtitle
   checkout: {
     title: 'Complete payment',
     subtitle: 'Use the Razorpay window to pay safely',
+  },
+  verifying: {
+    title: 'Payment received',
+    subtitle: 'Placing your order…',
   },
 };
 

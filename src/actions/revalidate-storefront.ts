@@ -52,6 +52,7 @@ export async function revalidateStorefrontBanners() {
   revalidateTag('storefront-banners');
   revalidateTag('storefront-homepage');
   revalidatePath('/');
+  revalidatePath('/', 'layout');
 }
 
 export async function revalidateStorefrontReviews(productId?: string) {
