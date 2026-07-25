@@ -209,6 +209,10 @@ export interface ShipmentInfo {
   awbCode?: string;
   labelUrl?: string;
   manifestUrl?: string;
+  /** Hyper-Local Instant rider OTPs (4 digits) */
+  pickupOtp?: string | null;
+  dropOtp?: string | null;
+  rtoOtp?: string | null;
   shippedAt?: string;
   deliveredAt?: string;
 }

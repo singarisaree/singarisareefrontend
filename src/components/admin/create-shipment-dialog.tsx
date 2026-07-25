@@ -278,7 +278,7 @@ export function CreateShipmentDialog({
     try {
       await adminOrderService.createShiprocketOrder(orderId, {
         mode: effectiveMode,
-        courierId: selectedCourier.courierId,
+        ...(selectedCourier.courierId > 0 ? { courierId: selectedCourier.courierId } : {}),
         ...(effectiveMode !== 'quick' ? { pickupDate: pickupDateIso } : {}),
         courierName: selectedCourier.courierName,
       });
@@ -499,11 +499,11 @@ export function CreateShipmentDialog({
                     </div>
                   ) : (
                     <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
-                      {couriers.map((courier) => {
+                      {couriers.map((courier, index) => {
                         const selected = selectedCourierId === courier.courierId;
                         return (
                           <label
-                            key={courier.courierId}
+                            key={`${courier.courierId}-${courier.courierName}-${index}`}
                             className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition-colors ${
                               selected
                                 ? 'border-[#0f172a] bg-[#f8fafc]'

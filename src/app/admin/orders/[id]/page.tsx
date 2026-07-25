@@ -472,7 +472,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                   <option value="QUICK">Quick (Instant)</option>
                 </AdminFormSelect>
                 <p className="mt-1.5 text-xs text-[#64748b]">
-                  Quick = fare charged at checkout only. Admin creates the Shiprocket Quick shipment later.
+                  Quick = fare charged at checkout only. Admin creates the Hyper-Local Instant shipment later.
                   International needs a non-India country below.
                 </p>
               </div>
@@ -909,9 +909,8 @@ function ShipmentActions({
 }) {
   const isQuick =
     Boolean(shipment.shiprocketOrderId) &&
-    (!shipment.awbCode ||
-      shipment.shiprocketShipmentId === shipment.shiprocketOrderId ||
-      shipment.courierName?.toLowerCase().includes('quick'));
+    (shipment.courierName?.toLowerCase().includes('quick') ||
+      (!shipment.awbCode && shipment.shiprocketShipmentId === shipment.shiprocketOrderId));
 
   const openUrl = async (label: string, fetcher: () => Promise<{ labelUrl?: string; invoiceUrl?: string; manifestUrl?: string }>, key: 'labelUrl' | 'invoiceUrl' | 'manifestUrl') => {
     const toastId = toast.loading(`Opening Shiprocket ${label}...`);
@@ -1050,6 +1049,13 @@ function ShipmentCard({
           <ShipmentField label="Tracking Number" value={shipment.trackingNumber} mono />
           <ShipmentField label="Shiprocket Order ID" value={shipment.shiprocketOrderId} mono />
           <ShipmentField label="Shiprocket Shipment ID" value={shipment.shiprocketShipmentId} mono />
+          {(shipment.pickupOtp || shipment.dropOtp || shipment.rtoOtp) && (
+            <>
+              <ShipmentField label="Pickup OTP" value={shipment.pickupOtp} mono />
+              <ShipmentField label="Drop OTP" value={shipment.dropOtp} mono />
+              <ShipmentField label="RTO OTP" value={shipment.rtoOtp} mono />
+            </>
+          )}
           <ShipmentField label="Shipped At" value={shipment.shippedAt ? formatDate(shipment.shippedAt) : undefined} />
           <ShipmentField label="Delivered At" value={shipment.deliveredAt ? formatDate(shipment.deliveredAt) : undefined} />
           {archivedAt && (

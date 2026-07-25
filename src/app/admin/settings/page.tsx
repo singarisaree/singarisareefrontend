@@ -692,8 +692,10 @@ export default function AdminSettingsPage() {
               Quick delivery
             </h2>
             <p className="mt-1 text-sm text-[#64748b]">
-              Pickup location, Instant acceptance hours (Asia/Kolkata), and
-              holidays when Instant is off.
+              Pickup GPS for Hyper-Local Instant quotes, acceptance hours
+              (Asia/Kolkata), and holidays when Instant is off. The pickup name
+              in env (<span className="font-mono text-[12px]">SHIPROCKET_PICKUP_LOCATION</span>)
+              must match a hyperlocal pickup already added in the Shiprocket panel.
             </p>
           </div>
 

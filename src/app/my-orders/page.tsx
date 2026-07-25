@@ -414,6 +414,25 @@ function MyOrdersPageContent() {
                       </div>
                     </button>
 
+                    {order.shipping?.dropOtp &&
+                      resolveDeliveryType(order.shippingAddress) === 'QUICK' && (
+                        <div className="border-t border-maroon/15 bg-maroon/[0.04] px-4 py-3 sm:px-5">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-maroon">
+                                Delivery OTP
+                              </p>
+                              <p className="mt-0.5 text-xs text-brown-light">
+                                Share with the rider on delivery
+                              </p>
+                            </div>
+                            <p className="shrink-0 font-mono text-xl font-semibold tracking-[0.28em] text-maroon sm:text-2xl">
+                              {order.shipping.dropOtp}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                     {showReturnBar && (
                       <div className="border-t border-beige px-4 py-2.5 sm:px-5">
                         <div className="flex items-center justify-between gap-2">

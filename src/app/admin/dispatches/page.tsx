@@ -16,6 +16,7 @@ import {
   useAdminSearchParam,
   useAdminStringParam,
   useAdminDateRangeParam,
+  useAdminEnumParam,
 } from '@/lib/use-admin-list-filters';
 import { useClampPaginationPage, isPaginationMismatch } from '@/lib/use-clamp-pagination-page';
 import { StatusBadge, orderStatusVariant } from '@/components/admin/status-badge';
@@ -33,14 +34,28 @@ import {
   AdminTd,
 } from '@/components/admin/data-table';
 
+const DELIVERY_TYPE_FILTERS = ['ALL', 'INDIA', 'QUICK', 'INTERNATIONAL'] as const;
+
 export default function AdminDispatchesPage() {
   const { search, debouncedSearch, onSearchChange } = useAdminSearchParam();
   const [courierParam, setCourierParam] = useAdminStringParam('courier');
   const activeCourier = courierParam || 'ALL';
+  const [deliveryType, setDeliveryType] = useAdminEnumParam(
+    'deliveryType',
+    DELIVERY_TYPE_FILTERS,
+    'ALL',
+  );
   const { dateRange, onDateRangeChange, dateParams } = useAdminDateRangeParam();
   const { page, setPage, pageSize, setPageSize, resetPage } = useAdminPagination();
 
-  useResetPageOnFilterChange(resetPage, activeCourier, debouncedSearch, dateParams.startDate, dateParams.endDate);
+  useResetPageOnFilterChange(
+    resetPage,
+    activeCourier,
+    deliveryType,
+    debouncedSearch,
+    dateParams.startDate,
+    dateParams.endDate,
+  );
 
   const setActiveCourier = useCallback(
     (courier: string) => {
@@ -49,14 +64,31 @@ export default function AdminDispatchesPage() {
     [setCourierParam],
   );
 
+  const onDeliveryTypeChange = useCallback(
+    (value: string) => {
+      setDeliveryType(value as (typeof DELIVERY_TYPE_FILTERS)[number]);
+      setCourierParam('');
+    },
+    [setDeliveryType, setCourierParam],
+  );
+
   const { data, isPending, isFetching, isPlaceholderData } = useQuery({
-    queryKey: ['admin-dispatches', activeCourier, debouncedSearch, page, pageSize, dateParams],
+    queryKey: [
+      'admin-dispatches',
+      activeCourier,
+      deliveryType,
+      debouncedSearch,
+      page,
+      pageSize,
+      dateParams,
+    ],
     queryFn: ({ signal }) =>
       adminDashboardService.listDispatches(
         {
           page: String(page),
           limit: String(pageSize),
           ...(activeCourier !== 'ALL' && { courier: activeCourier }),
+          ...(deliveryType !== 'ALL' && { deliveryType }),
           ...(debouncedSearch && { search: debouncedSearch }),
           ...dateParams,
         },
@@ -91,6 +123,7 @@ export default function AdminDispatchesPage() {
   const returnToQuery = (() => {
     const params = new URLSearchParams();
     if (activeCourier !== 'ALL') params.set('courier', activeCourier);
+    if (deliveryType !== 'ALL') params.set('deliveryType', deliveryType);
     if (debouncedSearch) params.set('q', debouncedSearch);
     const qs = params.toString();
     return qs ? `?${qs}` : '';
@@ -114,7 +147,22 @@ export default function AdminDispatchesPage() {
             searchMaxWidth="max-w-md"
             dateRange={dateRange}
             onDateRangeChange={onDateRangeChange}
-          />
+          >
+            <label className="sr-only" htmlFor="dispatches-delivery-type">
+              Delivery type
+            </label>
+            <select
+              id="dispatches-delivery-type"
+              value={deliveryType}
+              onChange={(e) => onDeliveryTypeChange(e.target.value)}
+              className="h-10 rounded-lg border border-[#e2e8f0] bg-white px-3 text-sm font-medium text-[#0f172a] focus:border-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
+            >
+              <option value="ALL">All types</option>
+              <option value="INDIA">India</option>
+              <option value="QUICK">Instant</option>
+              <option value="INTERNATIONAL">International</option>
+            </select>
+          </DataTableToolbar>
           {courierTabs.length > 0 && (
             <FilterTabs
               value={activeCourier}
@@ -153,7 +201,15 @@ export default function AdminDispatchesPage() {
                 <tr>
                   <td colSpan={8} className="px-5 py-12 text-center text-[#94a3b8]">
                     {activeCourier === 'ALL'
-                      ? 'No orders ready to ship'
+                      ? deliveryType === 'ALL'
+                        ? 'No orders ready to ship'
+                        : `No ${
+                            deliveryType === 'QUICK'
+                              ? 'Instant'
+                              : deliveryType === 'INDIA'
+                                ? 'India'
+                                : 'International'
+                          } orders ready to ship`
                       : `No ready-to-ship orders for ${
                           courierTabs.find((p) => p.key === activeCourier)?.label ?? 'this courier'
                         }`}
