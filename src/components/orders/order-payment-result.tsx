@@ -148,9 +148,9 @@ export function OrderPaymentSuccessView({
         Order details will be sent on WhatsApp.
       </p>
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Link href="/my-orders">
+        <Link href={`/my-orders?order=${encodeURIComponent(order.orderNumber || orderId)}`}>
           <Button variant="gold" className="w-full sm:w-auto">
-            View my orders
+            View order details
           </Button>
         </Link>
         <Link href="/collections">
@@ -215,8 +215,8 @@ export function OrderPaymentPendingView({
         This page updates automatically. You can also check status in My Orders.
       </p>
       <div className="mt-6">
-        <Link href="/my-orders">
-          <Button variant="outline">Go to my orders</Button>
+        <Link href={`/my-orders?order=${encodeURIComponent(order?.orderNumber || orderId)}`}>
+          <Button variant="outline">View order details</Button>
         </Link>
       </div>
     </OrderPaymentFrame>

@@ -9,6 +9,7 @@ import { CategoryCard } from '@/components/home/category-card';
 import { OurStorySection } from '@/components/home/our-story-section';
 import { NewsletterBanner } from '@/components/home/newsletter-banner';
 import { InstagramReelsSlider } from '@/components/home/instagram-reels-slider';
+import { HomeHashScroll } from '@/components/home/home-hash-scroll';
 import { ProductCard } from '@/components/products/product-card';
 import { ProductRoutesPrefetch } from '@/components/storefront/product-routes-prefetch';
 import { StoreSettingsSync } from '@/components/store-settings-provider';
@@ -85,9 +86,16 @@ async function HomeBelowFold() {
         </div>
       </section>
 
-      <section className="bg-[#faf6f1] py-16 sm:py-20" aria-labelledby="new-arrivals">
+      <section
+        id="new-arrivals"
+        className="scroll-mt-28 bg-[#faf6f1] py-16 sm:scroll-mt-32 sm:py-20"
+        aria-labelledby="new-arrivals-heading"
+      >
         <div className="mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-10">
-          <h2 id="new-arrivals" className="font-serif text-xl tracking-[0.2em] text-charcoal sm:text-2xl">
+          <h2
+            id="new-arrivals-heading"
+            className="font-serif text-xl tracking-[0.2em] text-charcoal sm:text-2xl"
+          >
             NEW ARRIVALS
           </h2>
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5 lg:gap-5">
@@ -169,6 +177,7 @@ async function HomeBelowFold() {
 export default function HomePage() {
   return (
     <>
+      <HomeHashScroll />
       <Suspense
         fallback={
           <div

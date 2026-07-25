@@ -64,7 +64,7 @@ export function Footer({ settings }: FooterProps) {
               <li><Link href="/" className="transition-colors hover:text-white">Home</Link></li>
               <li><Link href="/collections" className="transition-colors hover:text-white">Shop</Link></li>
               <li><Link href="/collections" className="transition-colors hover:text-white">Collections</Link></li>
-              <li><Link href="/collections" className="transition-colors hover:text-white">New Arrivals</Link></li>
+              <li><Link href="/#new-arrivals" className="transition-colors hover:text-white">New Arrivals</Link></li>
               <li><Link href="/about" className="transition-colors hover:text-white">About Us</Link></li>
               <li><Link href="/contact" className="transition-colors hover:text-white">Contact Us</Link></li>
             </ul>

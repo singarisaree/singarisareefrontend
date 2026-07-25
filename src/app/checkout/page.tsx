@@ -838,6 +838,22 @@ export default function CheckoutPage() {
         customerName: data.customerName,
         customerEmail: data.customerEmail,
         customerPhone: phone,
+        // Open status dialog the instant Razorpay reports success — no blank gap.
+        onVerifying: () => {
+          clearCheckoutDraft();
+          clearCart();
+          setIsSubmitting(false);
+          setPaymentResult({ orderId: orderNumber, outcome: 'success', verified: true });
+        },
+        onFailed: (reason) => {
+          clearCheckoutDraft();
+          setIsSubmitting(false);
+          setPaymentResult({
+            orderId: orderNumber,
+            outcome: 'failed',
+            reason: formatPaymentFailureMessage(reason),
+          });
+        },
         onVerifyFailed: (reason) => {
           setPaymentResult({
             orderId: orderNumber,
@@ -851,7 +867,11 @@ export default function CheckoutPage() {
         clearCheckoutDraft();
         clearCart();
         setIsSubmitting(false);
-        setPaymentResult({ orderId: orderNumber, outcome: 'success', verified: true });
+        setPaymentResult((prev) =>
+          prev?.orderId === orderNumber && prev.outcome === 'success'
+            ? prev
+            : { orderId: orderNumber, outcome: 'success', verified: true },
+        );
         return;
       }
       if (payResult.status === 'failed') {
@@ -860,11 +880,15 @@ export default function CheckoutPage() {
           .catch(() => undefined);
         clearCheckoutDraft();
         setIsSubmitting(false);
-        setPaymentResult({
-          orderId: orderNumber,
-          outcome: 'failed',
-          reason: formatPaymentFailureMessage(payResult.reason),
-        });
+        setPaymentResult((prev) =>
+          prev?.orderId === orderNumber && prev.outcome === 'failed'
+            ? prev
+            : {
+                orderId: orderNumber,
+                outcome: 'failed',
+                reason: formatPaymentFailureMessage(payResult.reason),
+              },
+        );
         return;
       }
       if (payResult.status === 'verify_pending') {
@@ -1068,12 +1092,12 @@ export default function CheckoutPage() {
   return (
     <>
       {items.length > 0 ? (
-      <div className="mx-auto box-border w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto box-border w-full max-w-7xl px-4 py-3 sm:px-6 sm:py-8 lg:px-8">
         <h1 className="hidden font-serif text-3xl text-charcoal sm:block">Checkout</h1>
         <button
           type="button"
           onClick={() => router.back()}
-          className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-maroon transition-colors hover:text-charcoal"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-maroon transition-colors hover:text-charcoal sm:mt-4"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden />
           Back
@@ -1082,7 +1106,7 @@ export default function CheckoutPage() {
         <form
           id="checkout-form"
           onSubmit={handleSubmit(onSubmit, handleCheckoutValidationError)}
-          className="mt-8 grid w-full min-w-0 max-w-full gap-6 sm:gap-8 lg:grid-cols-2"
+          className="mt-4 grid w-full min-w-0 max-w-full gap-6 sm:mt-8 sm:gap-8 lg:grid-cols-2"
         >
               <section className="luxury-card h-fit w-full min-w-0 max-w-full p-4 sm:p-6 lg:sticky lg:top-24">
                 <h2 className="font-serif text-lg">Products</h2>
@@ -1591,8 +1615,13 @@ export default function CheckoutPage() {
           if (!open) {
             const wasSuccess = paymentResult?.outcome === 'success';
             setPaymentResult(null);
+            // If closed with X (no CTA navigation), leave empty checkout → collections
             if (wasSuccess) {
-              router.replace('/my-orders');
+              requestAnimationFrame(() => {
+                if (window.location.pathname.startsWith('/checkout')) {
+                  router.replace('/collections');
+                }
+              });
             }
           }
         }}

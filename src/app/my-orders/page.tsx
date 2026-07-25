@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, RotateCcw, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -132,7 +133,26 @@ function getOrderStatusLine(order: Order, displayStatus: string): string {
 }
 
 export default function MyOrdersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[60vh] bg-beige/20">
+          <div className="mx-auto max-w-3xl space-y-3 px-4 py-6 sm:px-6 sm:py-8">
+            <OrderCardSkeleton />
+            <OrderCardSkeleton />
+          </div>
+        </div>
+      }
+    >
+      <MyOrdersPageContent />
+    </Suspense>
+  );
+}
+
+function MyOrdersPageContent() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const focusOrderParam = searchParams.get('order')?.trim() || '';
   const { customer, isLoading: authLoading, openLogin } = useCustomerAuth();
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [expandedReturnOrderId, setExpandedReturnOrderId] = useState<string | null>(null);
@@ -161,8 +181,30 @@ export default function MyOrdersPage() {
 
   useEffect(() => {
     if (authLoading || customer) return;
-    openLogin({ next: '/my-orders' });
-  }, [authLoading, customer, openLogin]);
+    const next = focusOrderParam
+      ? `/my-orders?order=${encodeURIComponent(focusOrderParam)}`
+      : '/my-orders';
+    openLogin({ next });
+  }, [authLoading, customer, focusOrderParam, openLogin]);
+
+  useEffect(() => {
+    if (!focusOrderParam || orders.length === 0) return;
+    const match = orders.find(
+      (order) =>
+        order.id === focusOrderParam ||
+        order.orderNumber === focusOrderParam ||
+        formatShortOrderNumber(order.orderNumber) === focusOrderParam,
+    );
+    if (!match) return;
+    setExpandedOrderId(match.id);
+    const timer = window.setTimeout(() => {
+      document.getElementById(`order-${match.id}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [focusOrderParam, orders]);
 
   const toggleOrder = (orderId: string) => {
     setExpandedOrderId((current) => (current === orderId ? null : orderId));
@@ -266,6 +308,7 @@ export default function MyOrdersPage() {
                 return (
                   <article
                     key={order.id}
+                    id={`order-${order.id}`}
                     className="overflow-hidden rounded-lg border border-beige bg-white shadow-sm"
                   >
                     <button
@@ -274,34 +317,66 @@ export default function MyOrdersPage() {
                       className="flex w-full gap-4 p-4 text-left transition-colors hover:bg-beige/20 sm:p-5"
                       aria-expanded={isExpanded}
                     >
-                      {firstItem?.imageUrl ? (
-                        <div className="relative h-[88px] w-[68px] shrink-0 overflow-hidden rounded-md bg-beige">
-                          <Image
-                            src={firstItem.imageUrl}
-                            alt={firstItem.productName}
-                            fill
-                            sizes="68px"
-                            className="object-cover"
-                          />
+                      {!isExpanded ? (
+                        <div className="relative h-[88px] w-[68px] shrink-0">
+                          {order.items.slice(0, 3).map((item, index) => (
+                            <div
+                              key={item.id || `${order.id}-preview-${index}`}
+                              className={cn(
+                                'absolute overflow-hidden rounded-md border border-white bg-beige shadow-sm',
+                                order.items.length === 1 ? 'inset-0' : 'h-[72px] w-[56px]',
+                              )}
+                              style={
+                                order.items.length > 1
+                                  ? {
+                                      top: index * 6,
+                                      left: index * 6,
+                                      zIndex: 3 - index,
+                                    }
+                                  : undefined
+                              }
+                            >
+                              {item.imageUrl ? (
+                                <Image
+                                  src={item.imageUrl}
+                                  alt={item.productName}
+                                  fill
+                                  sizes="68px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center text-[10px] text-brown-light">
+                                  No img
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      ) : (
-                        <div className="flex h-[88px] w-[68px] shrink-0 items-center justify-center rounded-md bg-beige text-xs text-brown-light">
-                          No img
-                        </div>
-                      )}
+                      ) : null}
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="line-clamp-2 text-sm font-medium text-charcoal sm:text-base">
-                              {firstItem?.productName || 'Order items'}
-                              {extraItems > 0 ? (
-                                <span className="font-normal text-brown-light">
-                                  {' '}
-                                  + {extraItems} more
-                                </span>
-                              ) : null}
-                            </p>
+                            {!isExpanded ? (
+                              <p className="line-clamp-2 text-sm font-medium text-charcoal sm:text-base">
+                                {order.items.length > 1
+                                  ? `${order.items.length} products`
+                                  : firstItem?.productName || 'Order items'}
+                                {order.items.length > 1 && firstItem?.productName ? (
+                                  <span className="font-normal text-brown-light">
+                                    {' '}
+                                    · {firstItem.productName}
+                                    {extraItems > 0 ? ` +${extraItems}` : ''}
+                                  </span>
+                                ) : null}
+                              </p>
+                            ) : (
+                              <p className="text-sm font-medium text-charcoal sm:text-base">
+                                {order.items.length > 1
+                                  ? `Order details · ${order.items.length} products`
+                                  : 'Order details'}
+                              </p>
+                            )}
                             <p className="mt-1 text-xs text-brown-light">
                               Order ID : {formatShortOrderNumber(order.orderNumber)}
                             </p>
@@ -319,7 +394,9 @@ export default function MyOrdersPage() {
                           </span>
                         </div>
 
-                        <p className="mt-2 text-sm text-charcoal">{statusLine}</p>
+                        {!isExpanded ? (
+                          <p className="mt-2 text-sm text-charcoal">{statusLine}</p>
+                        ) : null}
 
                         <div className="mt-2 flex items-center justify-between gap-2">
                           <span className="text-sm font-semibold text-charcoal">
@@ -395,9 +472,17 @@ export default function MyOrdersPage() {
 
                     {isExpanded && (
                       <div className="border-t border-beige bg-beige/10 px-4 pb-5 pt-4 sm:px-5 sm:pb-6">
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-brown-light">
+                          {order.items.length > 1
+                            ? `Products (${order.items.length})`
+                            : 'Product'}
+                        </p>
                         <div className="space-y-3">
-                          {order.items.map((item) => (
-                            <div key={item.id} className="flex gap-3 rounded-md bg-white p-3">
+                          {order.items.map((item, index) => (
+                            <div
+                              key={item.id || `${order.id}-item-${index}`}
+                              className="flex gap-3 rounded-md bg-white p-3"
+                            >
                               {item.imageUrl && (
                                 <div className="relative h-16 w-12 shrink-0 overflow-hidden rounded bg-beige">
                                   <Image

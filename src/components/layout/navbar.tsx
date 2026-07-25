@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import {
   Menu,
   X,
@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
 const navLinks = [
   { href: '/', label: 'HOME' },
   { href: '/collections', label: 'COLLECTIONS', hasDropdown: true },
-  { href: '/collections?sort=new', label: 'NEW ARRIVALS' },
+  { href: '/#new-arrivals', label: 'NEW ARRIVALS' },
   { href: '/about', label: 'ABOUT US' },
   { href: '/contact', label: 'CONTACT US' },
 ];
@@ -47,7 +47,7 @@ const navLinks = [
 const mobileNavLinks = [
   { href: '/', label: 'HOME', icon: House },
   { href: '/collections', label: 'COLLECTIONS', icon: Layers3 },
-  { href: '/collections?sort=new', label: 'NEW ARRIVALS', icon: Sparkles },
+  { href: '/#new-arrivals', label: 'NEW ARRIVALS', icon: Sparkles },
 ];
 
 export function Navbar() {
@@ -90,7 +90,7 @@ export function Navbar() {
   useEffect(() => {
     if (!profileOpen) return;
 
-    const onPointerDown = (event: MouseEvent) => {
+    const onPointerDown = (event: globalThis.MouseEvent) => {
       if (!profileRef.current?.contains(event.target as Node)) {
         setProfileOpen(false);
       }
@@ -118,10 +118,45 @@ export function Navbar() {
 
   useEffect(() => {
     if (!mobileOpen) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const html = document.documentElement;
+    const previous = {
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+      bodyOverscroll: body.style.overscrollBehavior,
+      htmlOverflow: html.style.overflow,
+    };
+
+    body.style.overflow = 'hidden';
+    body.style.position = 'fixed';
+    body.style.top = `-${scrollY}px`;
+    body.style.width = '100%';
+    body.style.overscrollBehavior = 'none';
+    html.style.overflow = 'hidden';
+
+    const preventTouchScroll = (event: TouchEvent) => {
+      // Allow touches inside the sidebar; block background page scroll.
+      const sidebar = document.querySelector('[data-mobile-sidebar]');
+      if (sidebar && event.target instanceof Node && sidebar.contains(event.target)) {
+        return;
+      }
+      event.preventDefault();
+    };
+    document.addEventListener('touchmove', preventTouchScroll, { passive: false });
+
     return () => {
-      document.body.style.overflow = previous;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.position = previous.bodyPosition;
+      body.style.top = previous.bodyTop;
+      body.style.width = previous.bodyWidth;
+      body.style.overscrollBehavior = previous.bodyOverscroll;
+      html.style.overflow = previous.htmlOverflow;
+      document.removeEventListener('touchmove', preventTouchScroll);
+      window.scrollTo(0, scrollY);
     };
   }, [mobileOpen]);
 
@@ -137,7 +172,22 @@ export function Navbar() {
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
-    return pathname.startsWith(href.split('?')[0]) && href !== '/';
+    if (href.startsWith('/#')) return false;
+    const path = href.split('?')[0];
+    return pathname.startsWith(path) && path !== '/';
+  };
+
+  const handleNavClick = (event: ReactMouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href !== '/#new-arrivals') return;
+    if (pathname !== '/') return;
+    event.preventDefault();
+    closeMobileMenu();
+    window.requestAnimationFrame(() => {
+      document.getElementById('new-arrivals')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
   };
 
   return (
@@ -191,6 +241,7 @@ export function Navbar() {
                 <Link
                   href={link.href}
                   prefetch
+                  onClick={(event) => handleNavClick(event, link.href)}
                   className={cn(
                     'relative flex items-center gap-1 py-1 text-[0.7rem] font-medium tracking-[0.12em] transition-colors hover:text-maroon xl:text-xs xl:tracking-[0.15em]',
                     isActive(link.href) ? 'text-maroon' : 'text-charcoal',
@@ -326,12 +377,13 @@ export function Navbar() {
         <div className="lg:hidden">
           <button
             type="button"
-            className="fixed inset-0 z-[60] bg-charcoal/40"
+            className="fixed inset-0 z-[60] touch-none bg-charcoal/40 overscroll-none"
             aria-label="Close menu"
             onClick={closeMobileMenu}
           />
           <aside
-            className="fixed inset-y-0 left-0 z-[70] flex w-[58.5%] max-w-[13.9rem] flex-col bg-cream shadow-2xl"
+            data-mobile-sidebar
+            className="fixed inset-y-0 left-0 z-[70] flex w-[49.7%] max-w-[11.8rem] flex-col overflow-hidden overscroll-none bg-cream shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-label="Menu"
@@ -348,7 +400,7 @@ export function Navbar() {
               </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-3 py-3">
+            <nav className="flex-1 overflow-hidden px-3 py-3">
               <ul className="space-y-0.5">
                 {mobileNavLinks.map((link) => {
                   const Icon = link.icon;
@@ -357,7 +409,12 @@ export function Navbar() {
                       <Link
                         href={link.href}
                         prefetch
-                        onClick={closeMobileMenu}
+                        onClick={(event) => {
+                          handleNavClick(event, link.href);
+                          if (link.href !== '/#new-arrivals' || pathname !== '/') {
+                            closeMobileMenu();
+                          }
+                        }}
                         className={cn(
                           'flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium tracking-wider',
                           isActive(link.href) ? 'bg-maroon/5 text-maroon' : 'text-charcoal',
@@ -419,9 +476,9 @@ export function Navbar() {
               </ul>
             </nav>
 
-            <div className="border-t border-maroon/10 px-3 py-3">
+            <div className="px-3 pb-3 pt-1">
               {authLoading && !customer ? (
-                <span className="flex items-center gap-3 rounded-md px-3 py-3 text-sm font-medium tracking-wider text-maroon/40">
+                <span className="flex items-center justify-center gap-2 rounded-md bg-maroon/40 px-3 py-3 text-sm font-medium tracking-wider text-white/80">
                   <UserRound className="h-[1.1rem] w-[1.1rem] shrink-0" strokeWidth={1.75} />
                   …
                 </span>
@@ -429,20 +486,10 @@ export function Navbar() {
                 <button
                   type="button"
                   onClick={askLogout}
-                  className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-maroon/5"
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-maroon px-3 py-3 text-sm font-medium tracking-wider text-white transition-colors hover:bg-maroon-dark"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-maroon/10 text-maroon">
-                    <UserRound className="h-5 w-5" strokeWidth={1.75} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium text-charcoal">
-                      {displayPhone || 'Account'}
-                    </span>
-                    <span className="mt-0.5 inline-flex items-center gap-1.5 text-xs font-medium tracking-wider text-maroon">
-                      <LogOut className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-                      LOGOUT
-                    </span>
-                  </span>
+                  <LogOut className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                  LOGOUT
                 </button>
               ) : (
                 <button
@@ -451,7 +498,7 @@ export function Navbar() {
                     closeMobileMenu();
                     openLogin();
                   }}
-                  className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm font-medium tracking-wider text-maroon"
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-maroon px-3 py-3 text-sm font-medium tracking-wider text-white transition-colors hover:bg-maroon-dark"
                 >
                   <UserRound className="h-[1.1rem] w-[1.1rem] shrink-0" strokeWidth={1.75} />
                   LOGIN

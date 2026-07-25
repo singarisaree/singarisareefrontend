@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Clock3, Loader2, ShoppingBag, XCircle } from 'lucide-react';
 import {
@@ -43,10 +43,16 @@ export function OrderPaymentResultDialog({
   onOpenChange,
   onOutcomeChange,
 }: OrderPaymentResultDialogProps) {
+  const router = useRouter();
   const open = Boolean(state);
   const orderId = state?.orderId ?? null;
   const outcome = state?.outcome ?? 'pending';
   const verified = state?.verified === true;
+
+  const go = (path: string) => {
+    onOpenChange(false);
+    router.replace(path);
+  };
 
   const { data: orderData } = useQuery({
     ...orderPaymentReturnQueryOptions(orderId),
@@ -79,7 +85,10 @@ export function OrderPaymentResultDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border-beige bg-cream sm:rounded-2xl">
+      <DialogContent
+        overlayClassName="bg-charcoal/35 backdrop-blur-md data-[state=open]:duration-0"
+        className="w-[80%] max-w-md border-beige bg-cream p-5 duration-0 data-[state=open]:zoom-in-100 sm:w-full sm:rounded-2xl sm:p-6 sm:duration-200 sm:data-[state=open]:zoom-in-95"
+      >
         {outcome === 'success' ? (
           <>
             <DialogHeader className="items-center text-center sm:items-center sm:text-center">
@@ -98,7 +107,7 @@ export function OrderPaymentResultDialog({
                 <p className="text-xs uppercase tracking-[0.18em] text-brown-light">
                   Order number
                 </p>
-                <p className="mt-1.5 font-serif text-xl text-charcoal">
+                <p className="mt-1.5 text-base font-normal text-charcoal">
                   {formatShortOrderNumber(order?.orderNumber || orderId)}
                 </p>
                 {order ? (
@@ -112,17 +121,19 @@ export function OrderPaymentResultDialog({
               </div>
             ) : null}
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <Link href="/my-orders" className="flex-1" onClick={() => onOpenChange(false)}>
-                <Button variant="gold" className="w-full">
-                  View my orders
-                </Button>
-              </Link>
-              <Link href="/collections" className="flex-1" onClick={() => onOpenChange(false)}>
-                <Button variant="outline" className="w-full">
-                  <ShoppingBag className="h-4 w-4" aria-hidden />
-                  Continue shopping
-                </Button>
-              </Link>
+              <Button
+                variant="gold"
+                className="flex-1"
+                onClick={() =>
+                  go(orderId ? `/my-orders?order=${encodeURIComponent(orderId)}` : '/my-orders')
+                }
+              >
+                View order details
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={() => go('/collections')}>
+                <ShoppingBag className="h-4 w-4" aria-hidden />
+                Continue shopping
+              </Button>
             </div>
           </>
         ) : null}
@@ -143,7 +154,7 @@ export function OrderPaymentResultDialog({
                 <p className="text-xs uppercase tracking-[0.18em] text-brown-light">
                   Order number
                 </p>
-                <p className="mt-1.5 font-serif text-xl text-charcoal">
+                <p className="mt-1.5 text-base font-normal text-charcoal">
                   {formatShortOrderNumber(orderId)}
                 </p>
               </div>
@@ -152,11 +163,9 @@ export function OrderPaymentResultDialog({
               <Button variant="gold" className="flex-1" onClick={() => onOpenChange(false)}>
                 Try again
               </Button>
-              <Link href="/collections" className="flex-1" onClick={() => onOpenChange(false)}>
-                <Button variant="outline" className="w-full">
-                  Continue shopping
-                </Button>
-              </Link>
+              <Button variant="outline" className="flex-1" onClick={() => go('/collections')}>
+                Continue shopping
+              </Button>
             </div>
           </>
         ) : null}
@@ -167,7 +176,9 @@ export function OrderPaymentResultDialog({
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
                 <Clock3 className="h-8 w-8" strokeWidth={1.5} aria-hidden />
               </div>
-              <DialogTitle className="font-serif text-2xl text-charcoal">Payment pending</DialogTitle>
+              <DialogTitle className="font-serif text-2xl text-charcoal">
+                Transaction pending
+              </DialogTitle>
               <DialogDescription className="text-brown-light">
                 {PAYMENT_PENDING_MESSAGE}
               </DialogDescription>
@@ -178,7 +189,7 @@ export function OrderPaymentResultDialog({
                 <p className="text-xs uppercase tracking-[0.18em] text-brown-light">
                   Order number
                 </p>
-                <p className="mt-1.5 font-serif text-xl text-charcoal">
+                <p className="mt-1.5 text-base font-normal text-charcoal">
                   {formatShortOrderNumber(orderId)}
                 </p>
               </div>
@@ -186,11 +197,15 @@ export function OrderPaymentResultDialog({
             <p className="text-center text-xs text-brown-light">
               This updates automatically. You can also check My Orders.
             </p>
-            <Link href="/my-orders" className="w-full" onClick={() => onOpenChange(false)}>
-              <Button variant="outline" className="w-full">
-                Go to my orders
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() =>
+                go(orderId ? `/my-orders?order=${encodeURIComponent(orderId)}` : '/my-orders')
+              }
+            >
+              View order details
+            </Button>
           </>
         ) : null}
       </DialogContent>
