@@ -56,6 +56,7 @@ export default function AdminSettingsPage() {
   const [quickStart, setQuickStart] = useState("09:00");
   const [quickEnd, setQuickEnd] = useState("21:00");
   const [quickHolidays, setQuickHolidays] = useState<string[]>([]);
+  const [quickInstantFree, setQuickInstantFree] = useState(false);
   const [holidayInput, setHolidayInput] = useState("");
   const [detectingLocation, setDetectingLocation] = useState(false);
 
@@ -156,6 +157,10 @@ export default function AdminSettingsPage() {
           .sort()
       : [];
     setQuickHolidays(holidays);
+    setQuickInstantFree(
+      map.quick_instant_delivery_free === true ||
+        map.quick_instant_delivery_free === "true",
+    );
   }, [quickPickupSettings]);
 
   useEffect(() => {
@@ -232,6 +237,11 @@ export default function AdminSettingsPage() {
         { key: "quick_delivery_start", value: quickStart, group: "shipping" },
         { key: "quick_delivery_end", value: quickEnd, group: "shipping" },
         { key: "quick_holidays", value: quickHolidays, group: "shipping" },
+        {
+          key: "quick_instant_delivery_free",
+          value: quickInstantFree,
+          group: "shipping",
+        },
       ]);
     },
     onSuccess: () => {
@@ -698,6 +708,25 @@ export default function AdminSettingsPage() {
               must match a hyperlocal pickup already added in the Shiprocket panel.
             </p>
           </div>
+
+          <label className="flex items-start gap-3 rounded-lg border border-[#e2e8f0] p-4">
+            <input
+              type="checkbox"
+              checked={quickInstantFree}
+              onChange={(e) => setQuickInstantFree(e.target.checked)}
+              disabled={quickPickupLoading || saveQuickPickup.isPending}
+              className="mt-0.5 h-4 w-4 rounded border-[#cbd5e1]"
+            />
+            <div>
+              <p className="text-sm font-medium text-[#0f172a]">
+                Instant delivery free
+              </p>
+              <p className="mt-1 text-xs text-[#64748b]">
+                When on, customers are charged ₹0 for Instant at checkout.
+                Serviceability still applies.
+              </p>
+            </div>
+          </label>
 
           <div className="space-y-4 border-b border-[#e2e8f0] pb-6">
             <h3 className="text-sm font-semibold text-[#0f172a]">
