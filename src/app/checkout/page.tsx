@@ -230,6 +230,8 @@ export default function CheckoutPage() {
   const cartHydrated = useCartHydrated();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [paymentResult, setPaymentResult] = useState<OrderPaymentDialogState | null>(null);
+  /** Covers checkout while Razorpay is open / closing so the cart page never flashes. */
+  const [paymentCover, setPaymentCover] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const pendingCheckoutRef = useRef<CheckoutForm | null>(null);
   const autoPayStartedRef = useRef(false);
@@ -821,6 +823,7 @@ export default function CheckoutPage() {
         clearCheckoutDraft();
         clearCart();
         setIsSubmitting(false);
+        setPaymentCover(true);
         setPaymentResult({ orderId: orderNumber, outcome: 'success', verified: true });
         return;
       }
@@ -828,6 +831,8 @@ export default function CheckoutPage() {
       if (!result.razorpayOrderId || !result.keyId) {
         throw new Error('Payment session was not created');
       }
+
+      setPaymentCover(true);
 
       const payResult = await openRazorpayCheckout({
         keyId: result.keyId,
@@ -843,18 +848,25 @@ export default function CheckoutPage() {
           clearCheckoutDraft();
           clearCart();
           setIsSubmitting(false);
+          setPaymentCover(true);
           setPaymentResult({ orderId: orderNumber, outcome: 'success', verified: true });
         },
         onFailed: (reason) => {
           clearCheckoutDraft();
           setIsSubmitting(false);
+          setPaymentCover(true);
           setPaymentResult({
             orderId: orderNumber,
             outcome: 'failed',
             reason: formatPaymentFailureMessage(reason),
           });
         },
+        onDismiss: () => {
+          setPaymentCover(false);
+          setIsSubmitting(false);
+        },
         onVerifyFailed: (reason) => {
+          setPaymentCover(true);
           setPaymentResult({
             orderId: orderNumber,
             outcome: 'failed',
@@ -867,6 +879,7 @@ export default function CheckoutPage() {
         clearCheckoutDraft();
         clearCart();
         setIsSubmitting(false);
+        setPaymentCover(true);
         setPaymentResult((prev) =>
           prev?.orderId === orderNumber && prev.outcome === 'success'
             ? prev
@@ -880,6 +893,7 @@ export default function CheckoutPage() {
           .catch(() => undefined);
         clearCheckoutDraft();
         setIsSubmitting(false);
+        setPaymentCover(true);
         setPaymentResult((prev) =>
           prev?.orderId === orderNumber && prev.outcome === 'failed'
             ? prev
@@ -895,17 +909,20 @@ export default function CheckoutPage() {
         clearCheckoutDraft();
         clearCart();
         setIsSubmitting(false);
+        setPaymentCover(true);
         setPaymentResult({ orderId: orderNumber, outcome: 'pending' });
         return;
       }
 
       void orderService.abandonCheckout(orderNumber).catch(() => undefined);
+      setPaymentCover(false);
       setIsSubmitting(false);
       toast.info('Payment cancelled. You can try again whenever you are ready.');
     } catch (error) {
       if (createdOrderNumber) {
         void orderService.abandonCheckout(createdOrderNumber).catch(() => undefined);
       }
+      setPaymentCover(false);
       const message =
         isAxiosError(error) && typeof error.response?.data?.message === 'string'
           ? error.response.data.message
@@ -1072,7 +1089,7 @@ export default function CheckoutPage() {
     return <CheckoutSkeleton />;
   }
 
-  if (items.length === 0 && !paymentResult) {
+  if (items.length === 0 && !paymentResult && !paymentCover) {
     return (
       <div className="mx-auto box-border flex min-h-[50vh] w-full max-w-7xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 lg:px-8">
         <ShoppingBag className="h-16 w-16 text-gold/40" strokeWidth={1.25} aria-hidden />
@@ -1091,7 +1108,7 @@ export default function CheckoutPage() {
 
   return (
     <>
-      {items.length > 0 ? (
+      {items.length > 0 && !paymentResult && !paymentCover ? (
       <div className="mx-auto box-border w-full max-w-7xl px-4 py-3 sm:px-6 sm:py-8 lg:px-8">
         <h1 className="hidden font-serif text-3xl text-charcoal sm:block">Checkout</h1>
         <button
@@ -1604,6 +1621,11 @@ export default function CheckoutPage() {
               </div>
         </form>
       </div>
+      ) : paymentResult || paymentCover ? (
+        <div
+          className="fixed inset-0 z-40 bg-charcoal/25 backdrop-blur-xl pattern-mandala"
+          aria-hidden
+        />
       ) : (
         <div className="mx-auto flex min-h-[50vh] max-w-7xl items-center justify-center px-4 py-16 text-center">
           <p className="font-serif text-2xl text-charcoal">Order update</p>
@@ -1613,17 +1635,14 @@ export default function CheckoutPage() {
         state={paymentResult}
         onOpenChange={(open) => {
           if (!open) {
-            const wasSuccess = paymentResult?.outcome === 'success';
             setPaymentResult(null);
-            // If closed with X (no CTA navigation), leave empty checkout → collections
-            if (wasSuccess) {
-              requestAnimationFrame(() => {
-                if (window.location.pathname.startsWith('/checkout')) {
-                  router.replace('/collections');
-                }
-              });
-            }
+            setPaymentCover(false);
           }
+        }}
+        onDismissSuccess={() => {
+          setPaymentResult(null);
+          setPaymentCover(false);
+          window.location.assign('/collections');
         }}
         onOutcomeChange={(outcome: PaymentResultOutcome) => {
           setPaymentResult((prev) => (prev ? { ...prev, outcome } : prev));

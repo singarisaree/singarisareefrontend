@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle2, Clock3, Loader2, ShoppingBag, XCircle } from 'lucide-react';
 import {
@@ -36,22 +35,24 @@ type OrderPaymentResultDialogProps = {
   state: OrderPaymentDialogState | null;
   onOpenChange: (open: boolean) => void;
   onOutcomeChange?: (outcome: PaymentResultOutcome) => void;
+  /** When set, closing via X after success goes here instead of leaving empty checkout. */
+  onDismissSuccess?: () => void;
 };
 
 export function OrderPaymentResultDialog({
   state,
   onOpenChange,
   onOutcomeChange,
+  onDismissSuccess,
 }: OrderPaymentResultDialogProps) {
-  const router = useRouter();
   const open = Boolean(state);
   const orderId = state?.orderId ?? null;
   const outcome = state?.outcome ?? 'pending';
   const verified = state?.verified === true;
 
   const go = (path: string) => {
-    onOpenChange(false);
-    router.replace(path);
+    // Hard navigation avoids races with dialog close / empty-cart redirects.
+    window.location.assign(path);
   };
 
   const { data: orderData } = useQuery({
@@ -83,11 +84,24 @@ export function OrderPaymentResultDialog({
         ? optimistic
         : orderData;
 
+  const orderDetailsPath = orderId
+    ? `/my-orders?order=${encodeURIComponent(orderId)}`
+    : '/my-orders';
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && outcome === 'success' && onDismissSuccess) {
+          onDismissSuccess();
+          return;
+        }
+        onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent
-        overlayClassName="bg-charcoal/35 backdrop-blur-md data-[state=open]:duration-0"
-        className="w-[80%] max-w-md border-beige bg-cream p-5 duration-0 data-[state=open]:zoom-in-100 sm:w-full sm:rounded-2xl sm:p-6 sm:duration-200 sm:data-[state=open]:zoom-in-95"
+        overlayClassName="!bg-charcoal/30 !backdrop-blur-xl data-[state=open]:duration-0"
+        className="flex !h-auto max-h-[80vh] !w-[80vw] !max-w-[80vw] flex-col overflow-y-auto border-beige bg-cream p-5 duration-0 data-[state=open]:zoom-in-100 sm:rounded-2xl sm:p-6"
       >
         {outcome === 'success' ? (
           <>
@@ -107,7 +121,7 @@ export function OrderPaymentResultDialog({
                 <p className="text-xs uppercase tracking-[0.18em] text-brown-light">
                   Order number
                 </p>
-                <p className="mt-1.5 text-base font-normal text-charcoal">
+                <p className="mt-1.5 font-sans text-base font-normal tracking-normal text-charcoal">
                   {formatShortOrderNumber(order?.orderNumber || orderId)}
                 </p>
                 {order ? (
@@ -122,15 +136,19 @@ export function OrderPaymentResultDialog({
             ) : null}
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
               <Button
+                type="button"
                 variant="gold"
                 className="flex-1"
-                onClick={() =>
-                  go(orderId ? `/my-orders?order=${encodeURIComponent(orderId)}` : '/my-orders')
-                }
+                onClick={() => go(orderDetailsPath)}
               >
                 View order details
               </Button>
-              <Button variant="outline" className="flex-1" onClick={() => go('/collections')}>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => go('/collections')}
+              >
                 <ShoppingBag className="h-4 w-4" aria-hidden />
                 Continue shopping
               </Button>
@@ -154,16 +172,21 @@ export function OrderPaymentResultDialog({
                 <p className="text-xs uppercase tracking-[0.18em] text-brown-light">
                   Order number
                 </p>
-                <p className="mt-1.5 text-base font-normal text-charcoal">
+                <p className="mt-1.5 font-sans text-base font-normal tracking-normal text-charcoal">
                   {formatShortOrderNumber(orderId)}
                 </p>
               </div>
             ) : null}
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <Button variant="gold" className="flex-1" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="gold" className="flex-1" onClick={() => onOpenChange(false)}>
                 Try again
               </Button>
-              <Button variant="outline" className="flex-1" onClick={() => go('/collections')}>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => go('/collections')}
+              >
                 Continue shopping
               </Button>
             </div>
@@ -189,7 +212,7 @@ export function OrderPaymentResultDialog({
                 <p className="text-xs uppercase tracking-[0.18em] text-brown-light">
                   Order number
                 </p>
-                <p className="mt-1.5 text-base font-normal text-charcoal">
+                <p className="mt-1.5 font-sans text-base font-normal tracking-normal text-charcoal">
                   {formatShortOrderNumber(orderId)}
                 </p>
               </div>
@@ -198,11 +221,10 @@ export function OrderPaymentResultDialog({
               This updates automatically. You can also check My Orders.
             </p>
             <Button
+              type="button"
               variant="outline"
               className="w-full"
-              onClick={() =>
-                go(orderId ? `/my-orders?order=${encodeURIComponent(orderId)}` : '/my-orders')
-              }
+              onClick={() => go(orderDetailsPath)}
             >
               View order details
             </Button>
