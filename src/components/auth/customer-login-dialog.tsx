@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { customerAuthService } from '@/services/customer-auth.service';
 import type { StoreCustomer } from '@/services/customer-auth.service';
 import { getApiErrorMessage } from '@/lib/api-error';
+import { cn } from '@/lib/utils';
 
 const DEFAULT_RESEND_SECONDS = 45;
 
@@ -64,6 +65,8 @@ export function CustomerLoginDialog({
   const otpInputRef = useRef<HTMLInputElement>(null);
   const phoneRef = useRef(phone);
   phoneRef.current = phone;
+  /** Lift dialog toward top on mobile when the soft keyboard is open. */
+  const [keyboardLifted, setKeyboardLifted] = useState(false);
 
   const reset = useCallback(() => {
     setOtp('');
@@ -73,6 +76,7 @@ export function CustomerLoginDialog({
     setResending(false);
     setVerifying(false);
     setResendIn(0);
+    setKeyboardLifted(false);
     sendInFlight.current = false;
     verifyInFlight.current = false;
   }, []);
@@ -85,6 +89,46 @@ export function CustomerLoginDialog({
     const cleaned = initialPhone.replace(/\D/g, '').slice(-10);
     setPhone(cleaned);
   }, [open, initialPhone, reset]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const syncKeyboard = () => {
+      if (typeof window === 'undefined') return;
+      const vv = window.visualViewport;
+      // Soft keyboard typically shrinks the visual viewport vs the layout height.
+      const covered = vv
+        ? window.innerHeight - vv.height > 100
+        : false;
+      setKeyboardLifted(covered);
+    };
+
+    syncKeyboard();
+    const vv = window.visualViewport;
+    vv?.addEventListener('resize', syncKeyboard);
+    vv?.addEventListener('scroll', syncKeyboard);
+    window.addEventListener('resize', syncKeyboard);
+    return () => {
+      vv?.removeEventListener('resize', syncKeyboard);
+      vv?.removeEventListener('scroll', syncKeyboard);
+      window.removeEventListener('resize', syncKeyboard);
+    };
+  }, [open]);
+
+  const onFieldFocus = () => {
+    // Immediate lift on focus — visualViewport can lag a frame behind the keypad.
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches) {
+      setKeyboardLifted(true);
+    }
+  };
+
+  const onFieldBlur = () => {
+    window.setTimeout(() => {
+      const vv = window.visualViewport;
+      const covered = vv ? window.innerHeight - vv.height > 100 : false;
+      if (!covered) setKeyboardLifted(false);
+    }, 150);
+  };
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -205,7 +249,14 @@ export function CustomerLoginDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border-beige bg-cream sm:rounded-2xl">
+      <DialogContent
+        className={cn(
+          'max-w-md border-beige bg-cream transition-[top,transform] duration-200 sm:rounded-2xl',
+          'max-sm:max-h-[min(92dvh,100%)] max-sm:overflow-y-auto',
+          keyboardLifted &&
+            'max-sm:!top-[38%] max-sm:!-translate-y-1/2',
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="font-serif text-2xl text-charcoal">{title}</DialogTitle>
           <DialogDescription className="text-brown-light">{description}</DialogDescription>
@@ -222,6 +273,8 @@ export function CustomerLoginDialog({
                 placeholder="10-digit mobile"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                onFocus={onFieldFocus}
+                onBlur={onFieldBlur}
                 className="mt-1.5"
                 autoFocus
               />
@@ -250,6 +303,8 @@ export function CustomerLoginDialog({
                 placeholder="6-digit code"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onFocus={onFieldFocus}
+                onBlur={onFieldBlur}
                 className="mt-1.5 tracking-[0.35em]"
                 maxLength={6}
                 disabled={verifying}

@@ -1,3 +1,5 @@
+import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { ProductCard } from '@/components/products/product-card';
 import { CollectionFilters } from '@/components/collections/collection-filters';
 import { StoreFooter } from '@/components/layout/store-footer';
@@ -5,8 +7,6 @@ import { ProductRoutesPrefetch } from '@/components/storefront/product-routes-pr
 import { getCachedCategoryPage } from '@/lib/store-category-page';
 import { serverStore } from '@/lib/server-store';
 import { categoryBreadcrumbJsonLd } from '@/lib/json-ld';
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -54,10 +54,10 @@ export default async function CategoryPage({ params }: Props) {
   try {
     page = await getCachedCategoryPage(slug);
   } catch {
-    notFound();
+    redirect('/');
   }
 
-  if (!page) notFound();
+  if (!page) redirect('/');
 
   const { category, categories, products } = page;
   const crumbsLd = categoryBreadcrumbJsonLd(category);

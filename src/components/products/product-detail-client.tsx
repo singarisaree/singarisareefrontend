@@ -124,6 +124,29 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     toast.quick('Added to cart');
   };
 
+  const handleBuyNow = () => {
+    if (!selectedColor || availableStock === 0) {
+      toast.error('This color is out of stock');
+      return;
+    }
+    if (product.isComingSoon) return;
+    if (!selectedCartItem) {
+      addItem({
+        productId: product.id,
+        productColorId: selectedColor.id,
+        productName: product.name,
+        colorName: selectedColor.name,
+        slug: product.slug,
+        imageUrl: firstImage || '',
+        price: product.effectivePrice,
+        mrp: product.mrp,
+        quantity: 1,
+        maxStock: availableStock,
+      });
+    }
+    router.push('/checkout');
+  };
+
   return (
     <>
       <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
@@ -270,27 +293,46 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               <p className="text-sm font-medium text-brown">
                 Color: <span className="text-maroon">{selectedColor?.name}</span>
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {product.colors.map((color) => (
-                  <button
-                    key={color.id}
-                    onClick={() => { setSelectedColor(color); setSelectedImageIndex(0); }}
-                    className={`rounded-full border-2 px-4 py-1.5 text-sm transition-all ${
-                      selectedColor?.id === color.id
-                        ? 'border-gold bg-gold/10 text-charcoal'
-                        : 'border-gold/30 text-brown hover:border-gold'
-                    }`}
-                    aria-label={`Select color ${color.name}`}
-                  >
-                    {color.hexCode && (
+              <div className="mt-2 flex flex-wrap items-center gap-3 sm:gap-2">
+                {product.colors.map((color) => {
+                  const selected = selectedColor?.id === color.id;
+                  const swatch = color.hexCode || '#c4b5a0';
+                  return (
+                    <button
+                      key={color.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedColor(color);
+                        setSelectedImageIndex(0);
+                      }}
+                      className={
+                        selected
+                          ? 'inline-flex items-center rounded-full sm:border-2 sm:border-gold sm:bg-gold/10 sm:px-4 sm:py-1.5'
+                          : 'inline-flex items-center rounded-full sm:border-2 sm:border-gold/30 sm:px-4 sm:py-1.5 sm:hover:border-gold'
+                      }
+                      aria-label={`Select color ${color.name}`}
+                      aria-pressed={selected}
+                      title={color.name}
+                    >
                       <span
-                        className="mr-2 inline-block h-3 w-3 rounded-full"
-                        style={{ backgroundColor: color.hexCode }}
+                        className={`h-9 w-9 shrink-0 rounded-full border-2 sm:mr-2 sm:h-3 sm:w-3 sm:border-0 ${
+                          selected
+                            ? 'border-gold shadow-[0_0_0_2px_rgba(197,160,89,0.35)] sm:shadow-none'
+                            : 'border-beige'
+                        }`}
+                        style={{ backgroundColor: swatch }}
+                        aria-hidden
                       />
-                    )}
-                    {color.name}
-                  </button>
-                ))}
+                      <span
+                        className={`hidden text-sm sm:inline ${
+                          selected ? 'text-charcoal' : 'text-brown'
+                        }`}
+                      >
+                        {color.name}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -318,7 +360,7 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               </p>
             ) : null}
 
-            <div className="mt-6">
+            <div className="mt-6 flex items-center gap-3">
               <span
                 className={`font-medium ${
                   availableStock > 0 ? 'text-sm text-red-400' : 'text-lg text-red-400'
@@ -326,11 +368,26 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               >
                 {availableStock > 0 ? `${availableStock} available` : 'Out of stock'}
               </span>
+              <ProductLikeButton
+                size="md"
+                product={{
+                  id: product.id,
+                  slug: product.slug,
+                  name: product.name,
+                  defaultImage: product.defaultImage,
+                  effectivePrice: product.effectivePrice,
+                  mrp: product.mrp,
+                  displaySoldCount: product.displaySoldCount,
+                  isComingSoon: product.isComingSoon,
+                  isOutOfStock: isProductFullyOutOfStock(product),
+                }}
+                className="border border-maroon/15"
+              />
             </div>
 
-            <div className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-5">
+            <div className="mt-8 flex flex-wrap items-center gap-x-2.5 gap-y-2 sm:gap-x-3">
               {selectedCartItem ? (
-                <div className="flex h-10 w-[70%] items-center justify-between rounded-md bg-gold px-1.5 py-0.5 text-cream sm:h-11 sm:w-auto sm:min-w-48 sm:px-2 sm:py-1">
+                <div className="flex h-[2.475rem] w-[47%] items-center justify-between rounded-md bg-gold px-1.5 py-0.5 text-cream sm:h-10 sm:w-[9.75rem] sm:px-2 sm:py-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -363,30 +420,26 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
               ) : (
                 <Button
                   variant="gold"
-                  size="lg"
-                  className="h-10 w-[70%] text-xs sm:h-11 sm:w-auto sm:text-sm"
+                  size="default"
+                  className="h-[2.475rem] w-[47%] px-3 text-xs sm:h-10 sm:w-[9.75rem] sm:px-5 sm:text-sm"
                   onClick={handleAddToCart}
                   disabled={availableStock === 0 || product.isComingSoon}
                 >
-                  <ShoppingCart className="h-4 w-4" aria-hidden />
+                  <ShoppingCart className="h-3.5 w-3.5 sm:hidden" aria-hidden />
                   {product.isComingSoon ? 'Coming Soon' : 'Add to Cart'}
                 </Button>
               )}
-              <ProductLikeButton
-                size="md"
-                product={{
-                  id: product.id,
-                  slug: product.slug,
-                  name: product.name,
-                  defaultImage: product.defaultImage,
-                  effectivePrice: product.effectivePrice,
-                  mrp: product.mrp,
-                  displaySoldCount: product.displaySoldCount,
-                  isComingSoon: product.isComingSoon,
-                  isOutOfStock: isProductFullyOutOfStock(product),
-                }}
-                className="border border-maroon/15"
-              />
+              {!product.isComingSoon ? (
+                <Button
+                  variant="default"
+                  size="default"
+                  className="h-[2.475rem] min-w-0 flex-1 px-3 text-xs sm:h-10 sm:w-auto sm:flex-none sm:px-5 sm:text-sm"
+                  onClick={handleBuyNow}
+                  disabled={availableStock === 0}
+                >
+                  Buy Now
+                </Button>
+              ) : null}
             </div>
 
             <div className="mt-6 overflow-hidden rounded-xl border border-orange-200/80 bg-gradient-to-br from-orange-50 via-white to-red-50 shadow-sm">

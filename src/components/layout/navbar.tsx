@@ -207,7 +207,7 @@ export function Navbar() {
           </ul>
 
           {/* Actions — right */}
-          <div className="flex min-w-0 items-center justify-end gap-2 sm:gap-3">
+          <div className="flex min-w-0 items-center justify-end gap-8.5 sm:gap-3">
             <NavbarSearch onNavigate={closeMobileMenu} />
 
             {/* Desktop profile (Flipkart-style) */}

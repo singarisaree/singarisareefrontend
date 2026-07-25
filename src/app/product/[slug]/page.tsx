@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { ProductDetailClient } from '@/components/products/product-detail-client';
@@ -83,10 +83,10 @@ export default async function ProductPage({ params }: Props) {
   try {
     product = await getCachedProductBySlug(slug);
   } catch {
-    notFound();
+    redirect('/');
   }
 
-  if (!product) notFound();
+  if (!product) redirect('/');
 
   const productLd = productJsonLd(product);
   const crumbsLd = breadcrumbJsonLd([
