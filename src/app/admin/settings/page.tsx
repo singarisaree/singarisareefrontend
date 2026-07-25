@@ -258,6 +258,34 @@ export default function AdminSettingsPage() {
       ),
   });
 
+  const saveQuickInstantFree = useMutation({
+    mutationFn: (enabled: boolean) =>
+      adminSettingsService.update([
+        {
+          key: "quick_instant_delivery_free",
+          value: enabled,
+          group: "shipping",
+        },
+      ]),
+    onSuccess: (_data, enabled) => {
+      setQuickInstantFree(enabled);
+      toast.success(
+        enabled
+          ? "Instant delivery is now free for customers"
+          : "Instant delivery fee restored",
+      );
+      queryClient.invalidateQueries({
+        queryKey: ["admin-settings-quick-pickup"],
+      });
+    },
+    onError: () => {
+      toast.error("Failed to update Instant free setting");
+      queryClient.invalidateQueries({
+        queryKey: ["admin-settings-quick-pickup"],
+      });
+    },
+  });
+
   const saveAnnouncement = useMutation({
     mutationFn: () =>
       adminSettingsService.update([
@@ -713,8 +741,16 @@ export default function AdminSettingsPage() {
             <input
               type="checkbox"
               checked={quickInstantFree}
-              onChange={(e) => setQuickInstantFree(e.target.checked)}
-              disabled={quickPickupLoading || saveQuickPickup.isPending}
+              onChange={(e) => {
+                const enabled = e.target.checked;
+                setQuickInstantFree(enabled);
+                saveQuickInstantFree.mutate(enabled);
+              }}
+              disabled={
+                quickPickupLoading ||
+                saveQuickPickup.isPending ||
+                saveQuickInstantFree.isPending
+              }
               className="mt-0.5 h-4 w-4 rounded border-[#cbd5e1]"
             />
             <div>
@@ -722,8 +758,8 @@ export default function AdminSettingsPage() {
                 Instant delivery free
               </p>
               <p className="mt-1 text-xs text-[#64748b]">
-                When on, customers are charged ₹0 for Instant at checkout.
-                Serviceability still applies.
+                Saves immediately. When on, customers are charged ₹0 for Instant
+                at checkout. Serviceability still applies.
               </p>
             </div>
           </label>
