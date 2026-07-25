@@ -495,6 +495,8 @@ export interface PublicSettings {
   default_shipping_charge?: number;
   free_shipping_threshold?: number;
   free_shipping_enabled?: boolean;
+  /** Admin Quick Delivery → Instant delivery free */
+  quick_instant_delivery_free?: boolean | string;
   announcement_bar_enabled?: boolean | string;
   announcement_bar_text?: string;
   announcement_bar_secondary_text?: string;

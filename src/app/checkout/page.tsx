@@ -25,6 +25,7 @@ import {
   isAddressReadyForShippingQuote,
   isHyderabadDeliveryArea,
   isIndiaShippingAddress,
+  isInstantDeliveryFree,
 } from '@/lib/shipping';
 import {
   FALLBACK_SHIPPING_COUNTRIES,
@@ -272,6 +273,7 @@ export default function CheckoutPage() {
 
   useCartSync();
   const settings = usePublicSettings();
+  const instantFree = isInstantDeliveryFree(settings);
   const isLoggedIn = Boolean(customer);
 
   useEffect(() => {
@@ -613,7 +615,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!isIndia || shippingStatus !== 'ready') return;
     if (preferredShipping === 'QUICK' && quickQuote) {
-      setShippingCharge(quickQuote.rate);
+      setShippingCharge(instantFree ? 0 : quickQuote.rate);
       setShippingMessage(`Instant · ${formatQuickEta(quickQuote.etaMinutes)}`);
       return;
     }
@@ -636,6 +638,7 @@ export default function CheckoutPage() {
     isIndia,
     preferredShipping,
     quickQuote,
+    instantFree,
     standardShippingCharge,
     settings,
     shippingStatus,
@@ -683,8 +686,9 @@ export default function CheckoutPage() {
         if (requestId !== quickRequestId.current) return;
 
         if (result.available && result.rate != null && Number.isFinite(Number(result.rate))) {
+          const rate = instantFree ? 0 : Number(result.rate);
           setQuickQuote({
-            rate: Number(result.rate),
+            rate,
             etaMinutes: result.etaMinutes ?? null,
             courierName: result.courierName ?? null,
           });
@@ -719,7 +723,14 @@ export default function CheckoutPage() {
     items,
     watchedPostalCode,
     watchedCity,
+    instantFree,
   ]);
+
+  // If admin turns Instant free on while checkout is open, zero the shown fee immediately
+  useEffect(() => {
+    if (!instantFree) return;
+    setQuickQuote((prev) => (prev && prev.rate !== 0 ? { ...prev, rate: 0 } : prev));
+  }, [instantFree]);
 
   const handleApplyCoupon = async (code?: string) => {
     const targetCode = (code || couponInput || '').trim().toUpperCase();
@@ -1328,7 +1339,9 @@ export default function CheckoutPage() {
                             <span className="flex items-baseline justify-between gap-2">
                               <span className="text-xs font-semibold text-charcoal">Instant</span>
                               <span className="shrink-0 text-xs font-semibold text-charcoal">
-                                {quickQuote.rate === 0 ? 'Free' : formatPrice(quickQuote.rate)}
+                                {instantFree || quickQuote.rate === 0
+                                  ? 'Free'
+                                  : formatPrice(quickQuote.rate)}
                               </span>
                             </span>
                             <span className="mt-0.5 flex items-baseline justify-between gap-2">

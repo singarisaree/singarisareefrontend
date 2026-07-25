@@ -277,6 +277,8 @@ export default function AdminSettingsPage() {
       queryClient.invalidateQueries({
         queryKey: ["admin-settings-quick-pickup"],
       });
+      queryClient.invalidateQueries({ queryKey: ["public-settings"] });
+      void refreshStorefrontAfterSettingsChange();
     },
     onError: () => {
       toast.error("Failed to update Instant free setting");

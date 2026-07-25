@@ -3,7 +3,12 @@ import { formatPrice } from '@/lib/utils';
 import { isIndiaCountry } from '@/lib/countries';
 
 function isTruthy(value: unknown): boolean {
-  return value === true || value === 'true';
+  return value === true || value === 'true' || value === 1 || value === '1';
+}
+
+/** Admin setting: Instant / Quick delivery charged as ₹0 at checkout. */
+export function isInstantDeliveryFree(settings?: PublicSettings): boolean {
+  return isTruthy(settings?.quick_instant_delivery_free);
 }
 
 export function isIndiaShippingAddress(country?: string, postalCode?: string, countryCode?: string): boolean {
