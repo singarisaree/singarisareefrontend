@@ -29,6 +29,7 @@ import {
   isIndiaShippingAddress,
   isInstantDeliveryFree,
 } from '@/lib/shipping';
+import { formatQuickEtaLabel } from '@/lib/instant-delivery-eta';
 import {
   FALLBACK_SHIPPING_COUNTRIES,
   buildCheckoutPhone,
@@ -151,63 +152,6 @@ function focusCheckoutField(field: keyof CheckoutForm) {
   });
 }
 
-function parseQuickEtaDurationMs(eta: string | null | undefined): number | null {
-  if (eta == null || !String(eta).trim()) return null;
-  const raw = String(eta).trim();
-
-  if (/^\d+$/.test(raw)) {
-    const mins = Number(raw);
-    return Number.isFinite(mins) && mins > 0 ? mins * 60_000 : null;
-  }
-
-  const aboutHours = raw.match(/about\s+(\d+(?:\.\d+)?)\s+hours?/i);
-  if (aboutHours) {
-    const hours = Number(aboutHours[1]);
-    return Number.isFinite(hours) && hours > 0 ? hours * 3_600_000 : null;
-  }
-
-  const aboutMins = raw.match(/about\s+(\d+)\s+minutes?/i);
-  if (aboutMins) {
-    const mins = Number(aboutMins[1]);
-    return Number.isFinite(mins) && mins > 0 ? mins * 60_000 : null;
-  }
-
-  const plainHours = raw.match(/^(\d+(?:\.\d+)?)\s*h(?:ours?)?$/i);
-  if (plainHours) {
-    const hours = Number(plainHours[1]);
-    return Number.isFinite(hours) && hours > 0 ? hours * 3_600_000 : null;
-  }
-
-  return null;
-}
-
-/** Instant ETA like Standard: “Arrives by 4:52 PM”. */
-function formatQuickEta(etaMinutes: string | null | undefined): string {
-  const durationMs = parseQuickEtaDurationMs(etaMinutes);
-  if (durationMs != null) {
-    const arriveAt = new Date(Date.now() + durationMs);
-    const time = arriveAt.toLocaleTimeString('en-IN', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-    return `Arrives by ${time}`;
-  }
-
-  if (etaMinutes == null || !String(etaMinutes).trim()) return 'Arrives today';
-  const raw = String(etaMinutes).trim();
-  if (/^arrives\b/i.test(raw)) return raw;
-  // Date-only strings from Shiprocket (e.g. “Jul 15, 2026”)
-  if (/^[A-Za-z]{3}\s+\d{1,2},\s+\d{4}$/.test(raw)) {
-    const today = new Date();
-    const sameDay =
-      raw.toLowerCase() ===
-      today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    return sameDay ? 'Arrives today' : `Arrives ${raw}`;
-  }
-  return `Arrives in ${raw}`;
-}
-
 function getFirstInvalidCheckoutField(
   fieldErrors: FieldErrors<CheckoutForm>,
 ): keyof CheckoutForm | undefined {
@@ -273,8 +217,6 @@ export default function CheckoutPage() {
   const [intlShippingFee, setIntlShippingFee] = useState<number | null>(null);
   const [intlShippingCurrency, setIntlShippingCurrency] = useState('INR');
   const [intlCourierCompanyId, setIntlCourierCompanyId] = useState<number | null>(null);
-  const [intlChargeableWeightKg, setIntlChargeableWeightKg] = useState<number | null>(null);
-  const [intlCourierOptions, setIntlCourierOptions] = useState<ShippingQuoteOption[]>([]);
   const intlCourierRef = useRef<string | null>(null);
   const [countries, setCountries] = useState<ShippingCountry[]>(FALLBACK_SHIPPING_COUNTRIES);
   const shippingRequestId = useRef(0);
@@ -545,8 +487,6 @@ export default function CheckoutPage() {
     setIntlShippingFee(null);
     setIntlShippingCurrency('INR');
     setIntlCourierCompanyId(null);
-    setIntlChargeableWeightKg(null);
-    setIntlCourierOptions([]);
     intlCourierRef.current = null;
   }, []);
 
@@ -599,7 +539,6 @@ export default function CheckoutPage() {
           setShippingCharge(0);
           setShippingStatus('unavailable');
           setShippingMessage(quote.message || 'Delivery is not available for this location.');
-          setIntlCourierOptions([]);
           setIntlCourier(null);
           setIntlCourierEta(null);
           setIntlShippingFee(null);
@@ -621,13 +560,6 @@ export default function CheckoutPage() {
                   },
                 ]
               : [];
-
-        setIntlCourierOptions(options);
-        setIntlChargeableWeightKg(
-          quote.chargeableWeightKg != null && Number.isFinite(quote.chargeableWeightKg)
-            ? quote.chargeableWeightKg
-            : null,
-        );
 
         if (!options.length) {
           setShippingCharge(0);
@@ -654,6 +586,8 @@ export default function CheckoutPage() {
     }, 450);
 
     return () => window.clearTimeout(timeoutId);
+    // International fare: country + cart weight only — not address line fields.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- by design
   }, [
     isIndia,
     watchedCountry,
@@ -670,7 +604,7 @@ export default function CheckoutPage() {
     if (!isIndia || shippingStatus !== 'ready') return;
     if (preferredShipping === 'QUICK' && quickQuote) {
       setShippingCharge(instantFree ? 0 : quickQuote.rate);
-      setShippingMessage(`Instant · ${formatQuickEta(quickQuote.etaMinutes)}`);
+      setShippingMessage(`Instant · ${formatQuickEtaLabel(quickQuote.etaMinutes)}`);
       return;
     }
     setShippingCharge(standardShippingCharge);
@@ -858,6 +792,9 @@ export default function CheckoutPage() {
               preferredShipping === 'QUICK' ? 'QUICK' : 'STANDARD',
             ...(intlCourier ? { selectedCourier: intlCourier } : {}),
             ...(intlCourierEta ? { selectedCourierEta: intlCourierEta } : {}),
+            ...(preferredShipping === 'QUICK' && quickQuote?.etaMinutes
+              ? { selectedCourierEta: String(quickQuote.etaMinutes).trim() }
+              : {}),
             ...(intlShippingFee != null ? { selectedShippingFee: intlShippingFee } : {}),
             ...(intlCourierCompanyId != null
               ? { selectedCourierCompanyId: intlCourierCompanyId }
@@ -1424,7 +1361,7 @@ export default function CheckoutPage() {
                               </span>
                               <span className="mt-0.5 flex flex-col gap-0.5">
                                 <span className="text-[11px] font-medium text-maroon">
-                                  {formatQuickEta(quickQuote.etaMinutes)}
+                                  {formatQuickEtaLabel(quickQuote.etaMinutes)}
                                 </span>
                                 <span className="text-[10px] text-brown-light">Delivery time</span>
                               </span>
@@ -1656,7 +1593,7 @@ export default function CheckoutPage() {
                         Instant delivery
                       </p>
                       <p className="mt-1.5 text-sm font-medium text-maroon">
-                        {formatQuickEta(quickQuote.etaMinutes)}
+                        {formatQuickEtaLabel(quickQuote.etaMinutes)}
                       </p>
                       {quickQuote.courierName ? (
                         <p className="mt-1 text-xs text-charcoal/75">via {quickQuote.courierName}</p>
@@ -1687,7 +1624,7 @@ export default function CheckoutPage() {
                               : 'Shipping'}
                         {preferredShipping === 'QUICK' && quickQuote && shippingStatus === 'ready' ? (
                           <span className="mt-0.5 block text-xs font-medium text-maroon">
-                            {formatQuickEta(quickQuote.etaMinutes)}
+                            {formatQuickEtaLabel(quickQuote.etaMinutes)}
                           </span>
                         ) : !isIndia && shippingStatus === 'ready' && shippingMessage ? (
                           <span className="mt-0.5 block text-xs font-normal text-charcoal/60">

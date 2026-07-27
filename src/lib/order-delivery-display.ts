@@ -6,7 +6,8 @@ import {
   getDeliveryTypeLabel,
   type DeliveryType,
 } from '@/lib/delivery-type';
-import { formatDate, formatTime } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
+import { formatInstantArrivesByTime } from '@/lib/instant-delivery-eta';
 
 export { resolveDeliveryType, getDeliveryTypeLabel, type DeliveryType };
 
@@ -210,13 +211,11 @@ export function formatEstimatedDeliveryMessage(input: DeliverySummaryInput): str
   const hasEta = eta != null && Number.isFinite(eta.getTime());
 
   if (type === 'QUICK') {
-    if (hasEta) {
-      const looksLikeDateOnly =
-        eta.getHours() === 0 && eta.getMinutes() === 0 && eta.getSeconds() === 0;
-      const arriveAt = looksLikeDateOnly ? new Date(Date.now() + 60 * 60 * 1000) : eta;
-      return `Instant delivery · arrives by ${formatTime(arriveAt)}`;
-    }
-    return 'Instant delivery · arrives today';
+    const etaHint =
+      input.shippingAddress?.selectedCourierEta?.trim() ||
+      input.selectedCourierEta?.trim() ||
+      null;
+    return `Instant delivery · arrives by ${formatInstantArrivesByTime(etaHint, input.estimatedDelivery)}`;
   }
 
   if (type === 'INTERNATIONAL') {
@@ -270,8 +269,6 @@ export function getOrderListStatusLine(
   displayStatus: string,
 ): string {
   const deliveryType = resolveDeliveryType(order.shippingAddress);
-  const eta = order.estimatedDelivery ? new Date(order.estimatedDelivery) : null;
-  const hasEta = eta != null && Number.isFinite(eta.getTime());
   const deliveredAt = order.shipping?.deliveredAt;
   const deliveredUpdate = order.trackingHistory?.find((e) => e.status === 'DELIVERED');
   const deliveredTimestamp = deliveredAt || deliveredUpdate?.timestamp;
@@ -292,14 +289,8 @@ export function getOrderListStatusLine(
 
   if (deliveryType === 'QUICK') {
     if (inTransit || early) {
-      if (hasEta) {
-        const looksLikeDateOnly =
-          eta.getHours() === 0 && eta.getMinutes() === 0 && eta.getSeconds() === 0;
-        if (!looksLikeDateOnly) {
-          return `Instant · arrives by ${formatTime(eta)}`;
-        }
-      }
-      return inTransit ? 'Instant · rider on the way' : 'Instant · arrives today';
+      const etaHint = order.shippingAddress?.selectedCourierEta?.trim() || null;
+      return `Instant · arrives by ${formatInstantArrivesByTime(etaHint, order.estimatedDelivery)}`;
     }
   }
 
