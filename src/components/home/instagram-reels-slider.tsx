@@ -3,6 +3,12 @@
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { InstagramAppLink } from '@/components/instagram-app-link';
 import { resolveStorefrontImageUrl } from '@/lib/image';
+import {
+  FIRST_BATCH,
+  MAX_REELS,
+  preloadInstagramReelsFirstBatch,
+  preloadInstagramReelsSecondBatch,
+} from '@/lib/preload-instagram-reels';
 
 export type InstagramReelItem = {
   id: string;
@@ -14,45 +20,6 @@ type InstagramReelsSliderProps = {
   reels: InstagramReelItem[];
   className?: string;
 };
-
-const FIRST_BATCH = 5;
-const PRELOAD_TIMEOUT_MS = 15_000;
-
-/**
- * Preload videos into memory and keep elements alive so the cache is warm.
- * Does not clear src (clearing was dropping the buffer and showing dark cards).
- */
-function preloadVideos(urls: string[]): Promise<HTMLVideoElement[]> {
-  if (typeof window === 'undefined' || !urls.length) return Promise.resolve([]);
-
-  return Promise.all(
-    urls.map(
-      (src) =>
-        new Promise<HTMLVideoElement>((resolve) => {
-          const video = document.createElement('video');
-          video.muted = true;
-          video.playsInline = true;
-          video.preload = 'auto';
-          video.setAttribute('playsinline', '');
-          video.setAttribute('webkit-playsinline', '');
-
-          let settled = false;
-          const finish = () => {
-            if (settled) return;
-            settled = true;
-            window.clearTimeout(timer);
-            resolve(video);
-          };
-
-          const timer = window.setTimeout(finish, PRELOAD_TIMEOUT_MS);
-          video.addEventListener('canplaythrough', finish, { once: true });
-          video.addEventListener('error', finish, { once: true });
-          video.src = src;
-          video.load();
-        }),
-    ),
-  );
-}
 
 const ReelCard = memo(function ReelCard({
   videoSrc,
@@ -115,7 +82,7 @@ function InstagramReelsSliderInner({ reels, className }: InstagramReelsSliderPro
     () =>
       reels
         .filter((reel) => reel.videoUrl && reel.instagramUrl)
-        .slice(0, 10)
+        .slice(0, MAX_REELS)
         .map((reel) => ({
           id: reel.id,
           videoSrc: resolveStorefrontImageUrl(reel.videoUrl),
@@ -124,8 +91,6 @@ function InstagramReelsSliderInner({ reels, className }: InstagramReelsSliderPro
     [reels],
   );
 
-  // Hold preloaded <video> nodes so buffers stay warm
-  const holdersRef = useRef<HTMLVideoElement[]>([]);
   const [firstReady, setFirstReady] = useState(false);
   const [secondReady, setSecondReady] = useState(false);
 
@@ -136,71 +101,20 @@ function InstagramReelsSliderInner({ reels, className }: InstagramReelsSliderPro
     setFirstReady(false);
     setSecondReady(false);
 
-    // Release previous holders
-    holdersRef.current.forEach((video) => {
-      try {
-        video.pause();
-        video.removeAttribute('src');
-        video.load();
-      } catch {
-        // ignore
-      }
-    });
-    holdersRef.current = [];
+    const urls = items.map((item) => item.videoSrc);
 
-    void (async () => {
-      const firstUrls = items.slice(0, FIRST_BATCH).map((item) => item.videoSrc);
-      const secondUrls = items.slice(FIRST_BATCH).map((item) => item.videoSrc);
-
-      // Load first 5 as soon as user lands on homepage — only then show the row
-      const firstHolders = await preloadVideos(firstUrls);
-      if (cancelled) {
-        firstHolders.forEach((v) => {
-          v.removeAttribute('src');
-          v.load();
-        });
-        return;
-      }
-      holdersRef.current.push(...firstHolders);
+    void preloadInstagramReelsFirstBatch(urls).then(() => {
+      if (cancelled) return;
       setFirstReady(true);
-
-      if (!secondUrls.length) {
-        setSecondReady(true);
-        return;
-      }
-
-      // Then warm next 5 in the background
-      const secondHolders = await preloadVideos(secondUrls);
-      if (cancelled) {
-        secondHolders.forEach((v) => {
-          v.removeAttribute('src');
-          v.load();
-        });
-        return;
-      }
-      holdersRef.current.push(...secondHolders);
-      setSecondReady(true);
-    })();
+      return preloadInstagramReelsSecondBatch(urls);
+    }).then(() => {
+      if (!cancelled) setSecondReady(true);
+    });
 
     return () => {
       cancelled = true;
     };
   }, [items]);
-
-  useEffect(() => {
-    return () => {
-      holdersRef.current.forEach((video) => {
-        try {
-          video.pause();
-          video.removeAttribute('src');
-          video.load();
-        } catch {
-          // ignore
-        }
-      });
-      holdersRef.current = [];
-    };
-  }, []);
 
   if (!items.length) return null;
 

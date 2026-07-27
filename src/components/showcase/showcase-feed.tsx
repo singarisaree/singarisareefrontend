@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, ShoppingCart, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { resolveStorefrontImageUrl } from '@/lib/image';
-import { preloadShowcaseVideos } from '@/lib/preload-showcase-videos';
+import { preloadShowcaseVideosWithPriority } from '@/lib/preload-showcase-videos';
 import { toast } from '@/lib/toast';
 import { formatPrice } from '@/lib/utils';
 import { useCartStore } from '@/stores/cart-store';
@@ -14,11 +14,13 @@ import type { ShowcaseItem } from '@/types';
 
 type Props = {
   items: ShowcaseItem[];
+  initialStartIndex?: number;
 };
 
 function ShowcaseSlide({
   item,
   videoSrc,
+  posterSrc,
   isActive,
   muted,
   onToggleMute,
@@ -26,6 +28,7 @@ function ShowcaseSlide({
 }: {
   item: ShowcaseItem;
   videoSrc: string;
+  posterSrc?: string;
   isActive: boolean;
   muted: boolean;
   onToggleMute: () => void;
@@ -34,6 +37,7 @@ function ShowcaseSlide({
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const wasActiveRef = useRef(false);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -49,15 +53,17 @@ function ShowcaseSlide({
     if (!el) return;
     if (isActive) {
       el.muted = muted;
-      el.currentTime = 0;
+      if (!wasActiveRef.current) {
+        el.currentTime = 0;
+      }
+      wasActiveRef.current = true;
       void el.play().catch(() => {
-        // Autoplay with sound is often blocked — mute so video still plays
         if (!muted) onAutoplayBlocked();
       });
     } else {
+      wasActiveRef.current = false;
       el.pause();
     }
-    // Only restart when the active slide / source changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- muted handled in separate effect
   }, [isActive, videoSrc, onAutoplayBlocked]);
 
@@ -98,11 +104,11 @@ function ShowcaseSlide({
 
   return (
     <section className="relative flex h-full w-full snap-start snap-always items-center justify-center overflow-hidden bg-black">
-      {/* Mobile: full width. Laptop+: centered 9:16 stage */}
       <div className="relative h-full w-full md:max-w-[min(100%,calc(100dvh*9/16))]">
         <video
           ref={videoRef}
           src={videoSrc}
+          poster={posterSrc}
           className="absolute inset-0 h-full w-full object-cover md:object-contain"
           playsInline
           loop
@@ -167,25 +173,21 @@ function ShowcaseSlide({
   );
 }
 
-export function ShowcaseFeed({ items }: Props) {
-  const searchParams = useSearchParams();
-  const startRaw = Number(searchParams.get('start') ?? '0');
-  const startIndex = Number.isFinite(startRaw) ? Math.max(0, Math.min(items.length - 1, startRaw)) : 0;
-
+function ShowcaseFeedBody({ items, startIndex }: { items: ShowcaseItem[]; startIndex: number }) {
   const prepared = useMemo(
     () =>
       items.map((item) => ({
         item,
         videoSrc: resolveStorefrontImageUrl(item.videoUrl),
+        posterSrc: item.imageUrl ? resolveStorefrontImageUrl(item.imageUrl) : undefined,
       })),
     [items],
   );
 
-  const [ready, setReady] = useState(false);
   const [activeIndex, setActiveIndex] = useState(startIndex);
-  // Default unmuted — browsers may still block until user taps unmute once
   const [muted, setMuted] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const didScrollRef = useRef(false);
 
   const toggleMute = useCallback(() => {
     setMuted((prev) => !prev);
@@ -197,15 +199,22 @@ export function ShowcaseFeed({ items }: Props) {
 
   useEffect(() => {
     if (!prepared.length) return;
-    void preloadShowcaseVideos(prepared.map((p) => p.videoSrc)).then(() => setReady(true));
-  }, [prepared]);
+    const urls = prepared.map((p) => p.videoSrc);
+    void preloadShowcaseVideosWithPriority(urls, startIndex);
+  }, [prepared, startIndex]);
 
   useEffect(() => {
-    if (!ready || !scrollerRef.current) return;
-    const el = scrollerRef.current.children[startIndex] as HTMLElement | undefined;
-    el?.scrollIntoView({ behavior: 'auto' });
     setActiveIndex(startIndex);
-  }, [ready, startIndex]);
+    didScrollRef.current = false;
+  }, [startIndex]);
+
+  useEffect(() => {
+    if (!scrollerRef.current || didScrollRef.current) return;
+    const el = scrollerRef.current.children[startIndex] as HTMLElement | undefined;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'auto' });
+    didScrollRef.current = true;
+  }, [startIndex, prepared.length]);
 
   useEffect(() => {
     const root = scrollerRef.current;
@@ -224,7 +233,7 @@ export function ShowcaseFeed({ items }: Props) {
 
     Array.from(root.children).forEach((child) => observer.observe(child));
     return () => observer.disconnect();
-  }, [ready, prepared.length]);
+  }, [prepared.length]);
 
   if (!prepared.length) {
     return (
@@ -237,20 +246,17 @@ export function ShowcaseFeed({ items }: Props) {
     );
   }
 
-  if (!ready) {
-    return <div className="h-full bg-black" aria-busy aria-label="Loading videos" />;
-  }
-
   return (
     <div
       ref={scrollerRef}
       className="h-full snap-y snap-mandatory overflow-y-auto overscroll-y-contain bg-black"
     >
-      {prepared.map(({ item, videoSrc }, index) => (
+      {prepared.map(({ item, videoSrc, posterSrc }, index) => (
         <div key={item.id} data-index={index} className="h-dvh w-full shrink-0">
           <ShowcaseSlide
             item={item}
             videoSrc={videoSrc}
+            posterSrc={posterSrc}
             isActive={activeIndex === index}
             muted={muted}
             onToggleMute={toggleMute}
@@ -259,5 +265,24 @@ export function ShowcaseFeed({ items }: Props) {
         </div>
       ))}
     </div>
+  );
+}
+
+function ShowcaseFeedContent({ items, initialStartIndex = 0 }: Props) {
+  const searchParams = useSearchParams();
+  const startRaw = Number(searchParams.get('start') ?? String(initialStartIndex));
+  const startIndex = Number.isFinite(startRaw)
+    ? Math.max(0, Math.min(items.length - 1, startRaw))
+    : initialStartIndex;
+
+  return <ShowcaseFeedBody items={items} startIndex={startIndex} />;
+}
+
+export function ShowcaseFeed(props: Props) {
+  const fallbackStart = props.initialStartIndex ?? 0;
+  return (
+    <Suspense fallback={<ShowcaseFeedBody items={props.items} startIndex={fallbackStart} />}>
+      <ShowcaseFeedContent {...props} />
+    </Suspense>
   );
 }

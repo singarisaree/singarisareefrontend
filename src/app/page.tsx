@@ -9,7 +9,7 @@ import { CategoryCard } from '@/components/home/category-card';
 import { OurStorySection } from '@/components/home/our-story-section';
 import { NewsletterBanner } from '@/components/home/newsletter-banner';
 import { SingariShowcaseRow } from '@/components/home/singari-showcase-row';
-import { HomeShowcasePreload } from '@/components/home/home-showcase-preload';
+import { HomeEarlyMediaPreload } from '@/components/home/home-early-media-preload';
 import { InstagramReelsSlider } from '@/components/home/instagram-reels-slider';
 import { HomeHashScroll } from '@/components/home/home-hash-scroll';
 import { ProductCard } from '@/components/products/product-card';
@@ -67,7 +67,6 @@ async function HomeBelowFold() {
 
   return (
     <>
-      <HomeShowcasePreload items={showcaseItems} />
       <StoreSettingsSync settings={settings} />
       <ProductRoutesPrefetch slugs={products.slice(0, 24).map((p) => p.slug)} />
       <TrustBar />
@@ -197,6 +196,9 @@ export default function HomePage() {
   return (
     <>
       <HomeHashScroll />
+      <Suspense fallback={null}>
+        <HomeEarlyMediaPreload />
+      </Suspense>
       <Suspense
         fallback={
           <div

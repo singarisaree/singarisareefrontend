@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { resolveStorefrontImageUrl } from '@/lib/image';
-import { preloadShowcaseVideos } from '@/lib/preload-showcase-videos';
+import { preloadShowcaseVideo, preloadShowcaseVideos } from '@/lib/preload-showcase-videos';
 import { toast } from '@/lib/toast';
 import { useCartStore } from '@/stores/cart-store';
 import type { ShowcaseItem } from '@/types';
@@ -75,8 +75,17 @@ const ShowcaseTile = memo(function ShowcaseTile({
     <div className="relative aspect-[9/16] w-[42vw] max-w-[11rem] shrink-0 snap-start overflow-hidden rounded-xl bg-charcoal sm:w-44 lg:w-48">
       <Link
         href={`/showcase?start=${index}`}
+        prefetch
         className="absolute inset-0"
         aria-label={`Watch ${item.productName}`}
+        onMouseEnter={() => {
+          router.prefetch(`/showcase?start=${index}`);
+          void preloadShowcaseVideo(videoSrc);
+        }}
+        onFocus={() => {
+          router.prefetch(`/showcase?start=${index}`);
+          void preloadShowcaseVideo(videoSrc);
+        }}
       >
         <video
           ref={ref}
