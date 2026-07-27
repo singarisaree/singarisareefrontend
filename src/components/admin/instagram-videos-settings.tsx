@@ -12,7 +12,7 @@ import { StatusBadge } from '@/components/admin/status-badge';
 import type { InstagramReel } from '@/types';
 
 const MAX_REELS = 10;
-const MAX_UPLOAD_MB = 40;
+const MAX_UPLOAD_MB = 100;
 
 export function InstagramVideosSettings() {
   const queryClient = useQueryClient();
@@ -177,7 +177,7 @@ export function InstagramVideosSettings() {
             className="mt-1.5 block w-full text-sm text-[#0f172a] file:mr-3 file:rounded-lg file:border-0 file:bg-[#0f172a] file:px-3 file:py-2 file:text-sm file:font-medium file:text-white"
           />
           <p className="mt-1 text-xs text-[#94a3b8]">
-            MP4 / WebM / MOV up to {MAX_UPLOAD_MB} MB. Server converts to compressed MP4 (~720p).
+            MP4 / WebM / MOV up to {MAX_UPLOAD_MB} MB. Server compresses to MP4 under 8 MB (~720p).
           </p>
           {videoFile ? (
             <p className="mt-1 text-xs text-[#64748b]">

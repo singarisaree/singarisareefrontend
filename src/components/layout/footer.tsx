@@ -6,7 +6,7 @@ import { BrandLogo } from '@/components/layout/brand-logo';
 import { STORE_CONTACT } from '@/lib/store-contact';
 
 const DEFAULT_INSTAGRAM_URL =
-  'https://www.instagram.com/sareeby_singari?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==';
+  'https://www.instagram.com/sareeby_singari/?utm_source=ig_web_button_share_sheet';
 
 interface FooterProps {
   settings?: {

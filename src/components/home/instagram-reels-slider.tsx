@@ -88,7 +88,7 @@ const ReelCard = memo(function ReelCard({
 
   return (
     <article
-      className="relative aspect-[9/16] w-[calc((100%-0.75rem)/2)] shrink-0 snap-start overflow-hidden rounded-lg bg-transparent lg:w-[calc((100%-3rem)/5)]"
+      className="relative aspect-[9/16] w-[calc((100%-0.75rem)*0.4)] shrink-0 snap-start overflow-hidden rounded-lg bg-transparent lg:w-[calc((100%-3rem)/5)]"
       style={{ contentVisibility: 'auto', containIntrinsicSize: '160px 280px' } as CSSProperties}
     >
       <video

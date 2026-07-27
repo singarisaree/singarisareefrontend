@@ -62,7 +62,7 @@ const checkoutSchema = z
     countryCode: z.string().length(2),
     state: z.string().min(2, 'State is required'),
     city: z.string().min(2, 'City is required'),
-    postalCode: z.string().min(2, 'Postal code is required'),
+    postalCode: z.string().min(2, 'Postal code is required').max(16),
     addressLine1: z.string().min(1, 'Door No is required'),
     addressLine2: z.string().min(2, 'Street / Area is required'),
     landmark: z.string().min(2, 'District / Locality is required'),
@@ -259,12 +259,14 @@ export default function CheckoutPage() {
   const [quickQuoteStatus, setQuickQuoteStatus] = useState<
     'idle' | 'loading' | 'ready' | 'unavailable'
   >('idle');
-  const [quickUnavailableMessage, setQuickUnavailableMessage] = useState<string | null>(null);
   const [shippingCharge, setShippingCharge] = useState(() => calculateShippingCharge(subtotal));
   const [shippingMessage, setShippingMessage] = useState('India domestic shipping rules apply.');
   const [shippingStatus, setShippingStatus] = useState<
     'idle' | 'loading' | 'ready' | 'unavailable' | 'error'
   >('idle');
+  // For international orders — courier name + ETA from the quote, sent with the order
+  const [intlCourier, setIntlCourier] = useState<string | null>(null);
+  const [intlCourierEta, setIntlCourierEta] = useState<string | null>(null);
   const [countries, setCountries] = useState<ShippingCountry[]>(FALLBACK_SHIPPING_COUNTRIES);
   const shippingRequestId = useRef(0);
   const quickRequestId = useRef(0);
@@ -411,10 +413,8 @@ export default function CheckoutPage() {
     setInstantDeliveryAvailable(false);
     setQuickQuote(null);
     setQuickQuoteStatus('idle');
-    setQuickUnavailableMessage(null);
     setPreferredShipping('STANDARD');
     setLocationError(null);
-    toast.info('Location detection removed. Detect again or enter address manually.');
   }, [hasDetectedLocation, deliveryCoordinates]);
 
   /** City / locality / state / country / pin — editing clears Detect My Location. */
@@ -507,6 +507,8 @@ export default function CheckoutPage() {
     setShippingCharge(0);
     setShippingStatus('idle');
     setShippingMessage('Enter a complete address to calculate shipping.');
+    setIntlCourier(null);
+    setIntlCourierEta(null);
   }, []);
 
   useEffect(() => {
@@ -570,6 +572,8 @@ export default function CheckoutPage() {
         }
 
         setShippingCharge(Number(quote.shippingFee) || 0);
+        setIntlCourier(quote.courier ?? null);
+        setIntlCourierEta(String(quote.estimatedDays || '').trim() || null);
         const etaRaw = String(quote.estimatedDays || '').trim();
         const etaLabel = etaRaw
           ? `Expected · ${formatDeliveryEstimate(etaRaw)}`
@@ -658,14 +662,12 @@ export default function CheckoutPage() {
     ) {
       setQuickQuote(null);
       setQuickQuoteStatus('idle');
-      setQuickUnavailableMessage(null);
       setPreferredShipping((prev) => (prev === 'QUICK' ? 'STANDARD' : prev));
       return;
     }
 
     const requestId = ++quickRequestId.current;
     setQuickQuoteStatus('loading');
-    setQuickUnavailableMessage(null);
 
     const timeoutId = window.setTimeout(async () => {
       try {
@@ -693,24 +695,16 @@ export default function CheckoutPage() {
             courierName: result.courierName ?? null,
           });
           setQuickQuoteStatus('ready');
-          setQuickUnavailableMessage(null);
           setPreferredShipping('QUICK');
         } else {
           setQuickQuote(null);
           setQuickQuoteStatus('unavailable');
-          setQuickUnavailableMessage(
-            result.message ||
-              'Instant delivery is not available right now. You can continue with Standard delivery.',
-          );
           setPreferredShipping('STANDARD');
         }
       } catch {
         if (requestId !== quickRequestId.current) return;
         setQuickQuote(null);
         setQuickQuoteStatus('unavailable');
-        setQuickUnavailableMessage(
-          'Instant delivery is not available right now. You can continue with Standard delivery.',
-        );
         setPreferredShipping('STANDARD');
       }
     }, 350);
@@ -811,7 +805,9 @@ export default function CheckoutPage() {
                 }
               : {}),
             preferredShipping:
-              preferredShipping === 'QUICK' && quickQuote ? 'QUICK' : 'STANDARD',
+              preferredShipping === 'QUICK' ? 'QUICK' : 'STANDARD',
+            ...(intlCourier ? { selectedCourier: intlCourier } : {}),
+            ...(intlCourierEta ? { selectedCourierEta: intlCourierEta } : {}),
           },
           items: items.map((i) => ({
             productId: i.productId,
@@ -841,6 +837,19 @@ export default function CheckoutPage() {
 
       if (!result.razorpayOrderId || !result.keyId) {
         throw new Error('Payment session was not created');
+      }
+
+      // Guard: Instant free must not open Razorpay with a delivery fee baked in
+      const serverShipping = Number(result.order?.shippingCharge ?? NaN);
+      if (
+        preferredShipping === 'QUICK' &&
+        instantFree &&
+        Number.isFinite(serverShipping) &&
+        serverShipping > 0.009
+      ) {
+        throw new Error(
+          'Instant delivery is set to free, but payment still includes a delivery fee. Please refresh and try again.',
+        );
       }
 
       setPaymentCover(true);
@@ -1051,13 +1060,7 @@ export default function CheckoutPage() {
         setPreferredShipping('STANDARD');
       }
 
-      if (addressFilled) {
-        toast.quick(
-          detected.isHyderabad
-            ? 'Location detected. Checking Instant delivery…'
-            : 'Address detected. You can edit Door No and Street / Area only.',
-        );
-      } else {
+      if (!addressFilled) {
         setLocationError('Could not read a full address from your location. Please fill the fields manually.');
         setHasDetectedLocation(false);
         setInstantDeliveryAvailable(false);
@@ -1137,69 +1140,94 @@ export default function CheckoutPage() {
           className="mt-4 grid w-full min-w-0 max-w-full gap-6 sm:mt-8 sm:gap-8 lg:grid-cols-2"
         >
               <section className="luxury-card h-fit w-full min-w-0 max-w-full p-4 sm:p-6 lg:sticky lg:top-24">
-                <h2 className="font-serif text-lg">Products</h2>
-                <div className="mt-4 space-y-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="font-serif text-lg">Products</h2>
+                  <p className="text-xs text-brown-light">
+                    {items.length} {items.length === 1 ? 'item' : 'items'}
+                  </p>
+                </div>
+                <div className="mt-4 space-y-3">
                   {items.map((item) => (
                     <article
                       key={item.productColorId}
-                      className="flex min-w-0 gap-3 border-b border-gold/10 pb-4 last:border-0 last:pb-0 sm:gap-4"
+                      className="overflow-hidden rounded-xl border border-gold/15 bg-beige/20"
                     >
-                      <Link href={`/product/${item.slug}`} className="relative h-24 w-20 shrink-0 overflow-hidden rounded bg-beige">
-                        {item.imageUrl ? (
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.productName}
-                            fill
-                            sizes="5rem"
-                            className="object-cover"
-                          />
-                        ) : null}
-                      </Link>
-                      <div className="flex min-w-0 flex-1 flex-col justify-between">
-                        <div className="min-w-0">
-                          <Link
-                            href={`/product/${item.slug}`}
-                            className="break-words font-serif text-charcoal hover:text-gold"
-                          >
-                            {item.productName}
-                          </Link>
-                          <p className="text-sm text-brown-light">
-                            Color: {formatColorLabel(item.colorName)}
-                          </p>
-                          <p className="mt-1 text-sm font-medium">{formatPrice(item.price)}</p>
-                        </div>
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                          <div className="flex shrink-0 items-center rounded-md border border-gold/30">
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.productColorId, item.quantity - 1)}
-                              className="p-1.5"
-                              aria-label="Decrease quantity"
-                            >
-                              <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="w-8 text-center text-sm">{item.quantity}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateQuantity(item.productColorId, item.quantity + 1)}
-                              className="p-1.5"
-                              aria-label="Increase quantity"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
-                          <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
-                            <span className="whitespace-nowrap text-sm font-medium">
-                              {formatPrice(item.price * item.quantity)}
+                      <div className="flex min-w-0 gap-3 p-3 sm:gap-4 sm:p-3.5">
+                        <Link
+                          href={`/product/${item.slug}`}
+                          className="relative aspect-[3/4] w-[4.75rem] shrink-0 overflow-hidden rounded-lg bg-beige sm:w-24"
+                        >
+                          {item.imageUrl ? (
+                            <Image
+                              src={item.imageUrl}
+                              alt={item.productName}
+                              fill
+                              sizes="96px"
+                              className="object-cover object-center"
+                            />
+                          ) : (
+                            <span className="flex h-full items-center justify-center text-[10px] text-brown-light">
+                              No image
                             </span>
+                          )}
+                        </Link>
+
+                        <div className="flex min-w-0 flex-1 flex-col">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <Link
+                                href={`/product/${item.slug}`}
+                                className="line-clamp-2 font-serif text-[0.95rem] leading-snug text-charcoal transition-colors hover:text-maroon sm:text-base"
+                              >
+                                {item.productName}
+                              </Link>
+                              <p className="mt-1 text-[11px] tracking-wide text-brown-light sm:text-xs">
+                                {formatColorLabel(item.colorName)}
+                              </p>
+                            </div>
                             <button
                               type="button"
                               onClick={() => removeItem(item.productColorId)}
-                              className="text-red-600 hover:text-red-700"
+                              className="shrink-0 rounded-md p-1.5 text-brown-light transition-colors hover:bg-white hover:text-red-600"
                               aria-label="Remove item"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
+                          </div>
+
+                          <div className="mt-auto flex items-end justify-between gap-3 pt-3">
+                            <div className="flex items-center rounded-full border border-gold/25 bg-white">
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.productColorId, item.quantity - 1)}
+                                className="flex h-8 w-8 items-center justify-center text-charcoal transition-colors hover:text-maroon"
+                                aria-label="Decrease quantity"
+                              >
+                                <Minus className="h-3.5 w-3.5" />
+                              </button>
+                              <span className="min-w-[1.5rem] text-center text-sm font-medium tabular-nums text-charcoal">
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.productColorId, item.quantity + 1)}
+                                className="flex h-8 w-8 items-center justify-center text-charcoal transition-colors hover:text-maroon"
+                                aria-label="Increase quantity"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+
+                            <div className="text-right">
+                              <p className="text-sm font-semibold tabular-nums text-charcoal sm:text-[0.95rem]">
+                                {formatPrice(item.price * item.quantity)}
+                              </p>
+                              {item.quantity > 1 ? (
+                                <p className="mt-0.5 text-[10px] tabular-nums text-brown-light sm:text-[11px]">
+                                  {formatPrice(item.price)} each
+                                </p>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1266,104 +1294,89 @@ export default function CheckoutPage() {
                   <h2 className="font-serif text-lg">Shipping Address</h2>
 
                   <div className="mt-4 rounded-lg border border-gold/25 bg-gold/5 p-4">
-                    <p className="text-xs text-brown-light">
-                      Use your current location to auto-fill the address
-                    </p>
+                    {!hasDetectedLocation ? (
+                      <p className="text-xs text-brown-light">
+                        Fetch location for accurate delivery
+                      </p>
+                    ) : null}
                     <Button
                       type="button"
                       variant="gold"
-                      className="mt-4 w-full sm:w-auto"
+                      className={`w-full sm:w-auto${!hasDetectedLocation ? ' mt-4' : ''}`}
                       onClick={() => void handleDetectLocation()}
                       disabled={isLocating}
                     >
                       <MapPin className={`mr-2 h-4 w-4 ${isLocating ? 'animate-pulse' : ''}`} />
-                      {isLocating ? 'Finding your location...' : 'Detect My Location'}
+                      {isLocating
+                        ? 'Finding your location...'
+                        : hasDetectedLocation
+                          ? 'Fetch Location Again'
+                          : 'Fetch Location'}
                     </Button>
-                    {hasDetectedLocation ? (
-                      <div className="mt-2 rounded-md border border-emerald-200/80 bg-emerald-50/80 px-2.5 py-2">
-                        <p className="text-[11px] font-medium leading-snug text-emerald-900">
-                          Location detected. You can edit Door No and Street / Area only.
-                        </p>
-                        {instantDeliveryAvailable && quickQuoteStatus === 'loading' ? (
-                          <p className="mt-0.5 text-[10px] leading-snug text-emerald-800/80">
-                            Checking Instant delivery availability…
-                          </p>
-                        ) : null}
-                        {instantDeliveryAvailable && quickQuoteStatus === 'unavailable' ? (
-                          <p className="mt-0.5 text-[10px] leading-snug text-emerald-800/80">
-                            {quickUnavailableMessage ||
-                              'Instant delivery is not available right now. You can continue with Standard delivery.'}
-                          </p>
-                        ) : null}
-                      </div>
-                    ) : null}
                     {locationError ? (
                       <p className="mt-2 text-[11px] leading-snug text-red-600">{locationError}</p>
                     ) : null}
                   </div>
 
-                  {isIndia && quickQuoteStatus === 'ready' && quickQuote ? (
+                  {isIndia && hasDetectedLocation ? (
                     <div className="mt-5 space-y-2.5">
-                      <div>
-                        <h3 className="font-serif text-sm text-charcoal">How would you like it delivered?</h3>
-                        <p className="mt-0.5 text-[11px] leading-snug text-brown-light">
-                          Instant is available for your Hyderabad location.
-                        </p>
-                      </div>
+                      <h3 className="font-serif text-sm text-charcoal">How would you like it delivered?</h3>
                       <div
                         className="grid gap-2 sm:grid-cols-2"
                         role="radiogroup"
                         aria-label="Delivery option"
                       >
-                        <button
-                          type="button"
-                          role="radio"
-                          aria-checked={preferredShipping === 'QUICK'}
-                          onClick={() => setPreferredShipping('QUICK')}
-                          className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all ${
-                            preferredShipping === 'QUICK'
-                              ? 'border-gold bg-gold/10 shadow-[0_0_0_1px_rgba(184,148,74,0.3)]'
-                              : 'border-gold/20 bg-white hover:border-gold/40 hover:bg-beige/30'
-                          }`}
-                        >
-                          <span
-                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                        {quickQuoteStatus === 'ready' && quickQuote ? (
+                          <button
+                            type="button"
+                            role="radio"
+                            aria-checked={preferredShipping === 'QUICK'}
+                            onClick={() => setPreferredShipping('QUICK')}
+                            className={`flex items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all ${
                               preferredShipping === 'QUICK'
-                                ? 'bg-gold/20 text-gold'
-                                : 'bg-beige text-brown-light'
+                                ? 'border-gold bg-gold/10 shadow-[0_0_0_1px_rgba(184,148,74,0.3)]'
+                                : 'border-gold/20 bg-white hover:border-gold/40 hover:bg-beige/30'
                             }`}
                           >
-                            <Zap className="h-3.5 w-3.5" aria-hidden />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="flex items-baseline justify-between gap-2">
-                              <span className="text-xs font-semibold text-charcoal">Instant</span>
-                              <span className="shrink-0 text-xs font-semibold text-charcoal">
-                                {instantFree || quickQuote.rate === 0
-                                  ? 'Free'
-                                  : formatPrice(quickQuote.rate)}
+                            <span
+                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                                preferredShipping === 'QUICK'
+                                  ? 'bg-gold/20 text-gold'
+                                  : 'bg-beige text-brown-light'
+                              }`}
+                            >
+                              <Zap className="h-3.5 w-3.5" aria-hidden />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="flex items-baseline justify-between gap-2">
+                                <span className="text-xs font-semibold text-charcoal">Instant</span>
+                                <span className="shrink-0 text-xs font-semibold text-charcoal">
+                                  {instantFree || quickQuote.rate === 0
+                                    ? 'Free'
+                                    : formatPrice(quickQuote.rate)}
+                                </span>
+                              </span>
+                              <span className="mt-0.5 flex items-baseline justify-between gap-2">
+                                <span className="truncate text-[10px] text-brown-light">
+                                  {formatQuickEta(quickQuote.etaMinutes)}
+                                </span>
+                                <span className="shrink-0 text-[10px] text-brown-light">Delivery fee</span>
                               </span>
                             </span>
-                            <span className="mt-0.5 flex items-baseline justify-between gap-2">
-                              <span className="truncate text-[10px] text-brown-light">
-                                {formatQuickEta(quickQuote.etaMinutes)}
-                              </span>
-                              <span className="shrink-0 text-[10px] text-brown-light">Delivery fee</span>
+                            <span
+                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                                preferredShipping === 'QUICK'
+                                  ? 'border-gold bg-gold text-white'
+                                  : 'border-gold/30 bg-white'
+                              }`}
+                              aria-hidden
+                            >
+                              {preferredShipping === 'QUICK' ? (
+                                <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                              ) : null}
                             </span>
-                          </span>
-                          <span
-                            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                              preferredShipping === 'QUICK'
-                                ? 'border-gold bg-gold text-white'
-                                : 'border-gold/30 bg-white'
-                            }`}
-                            aria-hidden
-                          >
-                            {preferredShipping === 'QUICK' ? (
-                              <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                            ) : null}
-                          </span>
-                        </button>
+                          </button>
+                        ) : null}
 
                         <button
                           type="button"
@@ -1426,12 +1439,6 @@ export default function CheckoutPage() {
 
                   <div>
                     <h3 className="font-serif text-base text-charcoal">Enter address manually</h3>
-                    {hasDetectedLocation ? (
-                      <p className="mt-1 text-[11px] leading-snug text-brown-light/90">
-                        Edit Door No or Street / Area freely. Changing city, pin, state, country, or locality
-                        removes location detection.
-                      </p>
-                    ) : null}
                   </div>
 
                   <div className="mt-4 grid gap-4 sm:grid-cols-2" lang="en">

@@ -17,6 +17,8 @@ import type {
   Coupon,
   HeroBanner,
   InstagramReel,
+  ShowcaseAdminData,
+  ShowcaseItem,
   CustomerReview,
   Category,
   StoreCustomer,
@@ -368,15 +370,43 @@ export const adminBannerService = {
   delete: (id: string) => apiDelete(`/hero-banners/${id}`),
 };
 
+/** Reel uploads can take several minutes while the server converts/compresses video. */
+const INSTAGRAM_REEL_UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
+
+export const adminShowcaseService = {
+  getAdmin: () => apiGet<ShowcaseAdminData>("/showcase/admin"),
+  setCategories: (categoryIds: string[]) =>
+    apiPut<{ categoryIds: string[] }>("/showcase/categories", { categoryIds }),
+  create: (formData: FormData) =>
+    api
+      .post<{ data: ShowcaseItem }>("/showcase", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: INSTAGRAM_REEL_UPLOAD_TIMEOUT_MS,
+      })
+      .then((res) => res.data.data),
+  update: (id: string, formData: FormData) =>
+    api
+      .put<{ data: ShowcaseItem }>(`/showcase/${id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: INSTAGRAM_REEL_UPLOAD_TIMEOUT_MS,
+      })
+      .then((res) => res.data.data),
+  reorder: (orderedIds: string[]) =>
+    apiPut<ShowcaseItem[]>("/showcase/reorder", { orderedIds }),
+  delete: (id: string) => apiDelete(`/showcase/${id}`),
+};
+
 export const adminInstagramReelService = {
   getAll: () => apiGet<InstagramReel[]>("/instagram/reels/all"),
   create: (formData: FormData) =>
     api.post<{ data: InstagramReel }>("/instagram/reels", formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      timeout: INSTAGRAM_REEL_UPLOAD_TIMEOUT_MS,
     }).then((res) => res.data.data),
   update: (id: string, formData: FormData) =>
     api.put<{ data: InstagramReel }>(`/instagram/reels/${id}`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
+      timeout: INSTAGRAM_REEL_UPLOAD_TIMEOUT_MS,
     }).then((res) => res.data.data),
   reorder: (orderedIds: string[]) =>
     apiPut<InstagramReel[]>("/instagram/reels/reorder", { orderedIds }),

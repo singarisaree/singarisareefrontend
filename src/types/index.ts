@@ -118,6 +118,29 @@ export interface InstagramReel {
   updatedAt?: string;
 }
 
+export interface ShowcaseItem {
+  id: string;
+  videoUrl: string;
+  sortOrder: number;
+  isActive: boolean;
+  productId: string;
+  productColorId: string;
+  productName: string;
+  slug: string;
+  colorName: string;
+  price: number;
+  mrp: number;
+  imageUrl: string | null;
+  maxStock: number;
+  isComingSoon: boolean;
+  isOutOfStock: boolean;
+}
+
+export interface ShowcaseAdminData {
+  categoryIds: string[];
+  items: ShowcaseItem[];
+}
+
 export interface CartItem {
   productId: string;
   productColorId: string;
@@ -149,6 +172,10 @@ export interface ShippingAddress {
   latitude?: number;
   longitude?: number;
   preferredShipping?: 'QUICK' | 'STANDARD';
+  /** International orders: courier chosen at checkout */
+  selectedCourier?: string;
+  /** International orders: ETA chosen at checkout */
+  selectedCourierEta?: string;
 }
 
 export interface ShippingQuoteResult {

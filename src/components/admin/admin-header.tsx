@@ -16,6 +16,7 @@ const pageTitles: Record<string, string> = {
   '/admin/coupons/new': 'Create Coupon',
   '/admin/users': 'Users',
   '/admin/reviews': 'Reviews',
+  '/admin/showcase': 'Singari Showcase',
   '/admin/settings': 'Settings',
 };
 

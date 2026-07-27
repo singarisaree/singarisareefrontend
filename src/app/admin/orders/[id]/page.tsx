@@ -552,6 +552,17 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                 label="Delivery type"
                 value={getDeliveryTypeLabel(resolveDeliveryType(order.shippingAddress as ShippingAddress))}
               />
+              {(order.shippingAddress as ShippingAddress).selectedCourier && (
+                <SummaryRow
+                  label="Intl. Courier"
+                  value={[
+                    (order.shippingAddress as ShippingAddress).selectedCourier,
+                    (order.shippingAddress as ShippingAddress).selectedCourierEta
+                      ? `ETA: ${(order.shippingAddress as ShippingAddress).selectedCourierEta} days`
+                      : null,
+                  ].filter(Boolean).join(' · ')}
+                />
+              )}
               <div className="border-t border-[#e2e8f0] pt-2.5">
                 <SummaryRow label="Grand Total" value={formatPrice(Number(order.grandTotal))} bold />
               </div>

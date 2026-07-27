@@ -140,6 +140,7 @@ export const serverStore = {
             instagramUrl: string;
             sortOrder: number;
           }>;
+          showcaseItems: import('@/types').ShowcaseItem[];
         }>('/storefront/homepage'),
       ['storefront-homepage', 'storefront-banners', 'storefront-categories', 'storefront-products', 'storefront-settings'],
     ),

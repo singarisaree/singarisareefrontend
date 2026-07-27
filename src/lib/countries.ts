@@ -7,28 +7,44 @@ export interface ShippingCountry {
   postalRegex?: string | null;
 }
 
-/** Fallback when Shiprocket countries API is unavailable. India first. */
+/** Exact list of countries available for shipping. India is first / default. */
 export const FALLBACK_SHIPPING_COUNTRIES: ShippingCountry[] = [
-  { name: 'India', isoCode: 'IN', dialCode: '+91', postcodeRequired: true, postalRegex: '/^(\\d{6})$/' },
-  { name: 'United States', isoCode: 'US', dialCode: '+1', postcodeRequired: true, postalRegex: '/^(\\d{5})(-\\d{4})?$/' },
-  { name: 'United Kingdom', isoCode: 'GB', dialCode: '+44', postcodeRequired: true, postalRegex: '/^[A-Z]{1,2}\\d[A-Z\\d]?\\s*\\d[A-Z]{2}$/i' },
-  { name: 'Canada', isoCode: 'CA', dialCode: '+1', postcodeRequired: true, postalRegex: '/^[A-Z]\\d[A-Z]\\s*\\d[A-Z]\\d$/i' },
-  { name: 'Australia', isoCode: 'AU', dialCode: '+61', postcodeRequired: true, postalRegex: '/^(\\d{4})$/' },
+  // Default
+  { name: 'India',          isoCode: 'IN', dialCode: '+91',  postcodeRequired: true,  postalRegex: '/^(\\d{6})$/' },
+  // English-speaking
+  { name: 'United States',  isoCode: 'US', dialCode: '+1',   postcodeRequired: true,  postalRegex: '/^(\\d{5})(-\\d{4})?$/' },
+  { name: 'Canada',         isoCode: 'CA', dialCode: '+1',   postcodeRequired: true,  postalRegex: '/^[A-Z]\\d[A-Z]\\s*\\d[A-Z]\\d$/i' },
+  { name: 'United Kingdom', isoCode: 'GB', dialCode: '+44',  postcodeRequired: true,  postalRegex: '/^[A-Z]{1,2}\\d[A-Z\\d]?\\s*\\d[A-Z]{2}$/i' },
+  { name: 'Australia',      isoCode: 'AU', dialCode: '+61',  postcodeRequired: true,  postalRegex: '/^(\\d{4})$/' },
+  { name: 'New Zealand',    isoCode: 'NZ', dialCode: '+64',  postcodeRequired: true,  postalRegex: '/^(\\d{4})$/' },
+  // Middle East
   { name: 'United Arab Emirates', isoCode: 'AE', dialCode: '+971', postcodeRequired: true, postalRegex: '/^(\\d{5})$/' },
-  { name: 'Singapore', isoCode: 'SG', dialCode: '+65', postcodeRequired: true, postalRegex: '/^(\\d{6})$/' },
-  { name: 'Germany', isoCode: 'DE', dialCode: '+49', postcodeRequired: true, postalRegex: '/^(\\d{5})$/' },
-  { name: 'France', isoCode: 'FR', dialCode: '+33', postcodeRequired: true, postalRegex: '/^(\\d{5})$/' },
-  { name: 'Italy', isoCode: 'IT', dialCode: '+39', postcodeRequired: true, postalRegex: '/^(\\d{5})$/' },
-  { name: 'Spain', isoCode: 'ES', dialCode: '+34', postcodeRequired: true, postalRegex: '/^(\\d{5})$/' },
-  { name: 'Netherlands', isoCode: 'NL', dialCode: '+31', postcodeRequired: true, postalRegex: '/^\\d{4}\\s?[A-Z]{2}$/i' },
-  { name: 'Saudi Arabia', isoCode: 'SA', dialCode: '+966', postcodeRequired: true, postalRegex: '/^(\\d{5})$/' },
-  { name: 'Qatar', isoCode: 'QA', dialCode: '+974', postcodeRequired: true, postalRegex: '/^(\\d{5})$/' },
-  { name: 'Kuwait', isoCode: 'KW', dialCode: '+965', postcodeRequired: true, postalRegex: '/^(\\d{5})$/' },
-  { name: 'Malaysia', isoCode: 'MY', dialCode: '+60', postcodeRequired: true, postalRegex: '/^(\\d{5})$/' },
-  { name: 'Japan', isoCode: 'JP', dialCode: '+81', postcodeRequired: true, postalRegex: '/^\\d{3}-?\\d{4}$/' },
-  { name: 'New Zealand', isoCode: 'NZ', dialCode: '+64', postcodeRequired: true, postalRegex: '/^(\\d{4})$/' },
-  { name: 'South Africa', isoCode: 'ZA', dialCode: '+27', postcodeRequired: true, postalRegex: '/^(\\d{4})$/' },
-  { name: 'Brazil', isoCode: 'BR', dialCode: '+55', postcodeRequired: true, postalRegex: '/^\\d{5}-?\\d{3}$/' },
+  { name: 'Saudi Arabia',   isoCode: 'SA', dialCode: '+966', postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'Qatar',          isoCode: 'QA', dialCode: '+974', postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'Kuwait',         isoCode: 'KW', dialCode: '+965', postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  // Asia
+  { name: 'Singapore',      isoCode: 'SG', dialCode: '+65',  postcodeRequired: true,  postalRegex: '/^(\\d{6})$/' },
+  { name: 'Malaysia',       isoCode: 'MY', dialCode: '+60',  postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'Japan',          isoCode: 'JP', dialCode: '+81',  postcodeRequired: true,  postalRegex: '/^\\d{3}-?\\d{4}$/' },
+  { name: 'South Korea',    isoCode: 'KR', dialCode: '+82',  postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'Hong Kong',      isoCode: 'HK', dialCode: '+852', postcodeRequired: true,  postalRegex: null },
+  { name: 'Thailand',       isoCode: 'TH', dialCode: '+66',  postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'Indonesia',      isoCode: 'ID', dialCode: '+62',  postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'Vietnam',        isoCode: 'VN', dialCode: '+84',  postcodeRequired: true,  postalRegex: '/^(\\d{6})$/' },
+  // Europe
+  { name: 'Germany',        isoCode: 'DE', dialCode: '+49',  postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'France',         isoCode: 'FR', dialCode: '+33',  postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'Netherlands',    isoCode: 'NL', dialCode: '+31',  postcodeRequired: true,  postalRegex: '/^\\d{4}\\s?[A-Z]{2}$/i' },
+  { name: 'Italy',          isoCode: 'IT', dialCode: '+39',  postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'Switzerland',    isoCode: 'CH', dialCode: '+41',  postcodeRequired: true,  postalRegex: '/^(\\d{4})$/' },
+  { name: 'Belgium',        isoCode: 'BE', dialCode: '+32',  postcodeRequired: true,  postalRegex: '/^(\\d{4})$/' },
+  { name: 'Sweden',         isoCode: 'SE', dialCode: '+46',  postcodeRequired: true,  postalRegex: '/^\\d{3}\\s?\\d{2}$/' },
+  { name: 'Norway',         isoCode: 'NO', dialCode: '+47',  postcodeRequired: true,  postalRegex: '/^(\\d{4})$/' },
+  { name: 'Denmark',        isoCode: 'DK', dialCode: '+45',  postcodeRequired: true,  postalRegex: '/^(\\d{4})$/' },
+  { name: 'Finland',        isoCode: 'FI', dialCode: '+358', postcodeRequired: true,  postalRegex: '/^(\\d{5})$/' },
+  { name: 'Austria',        isoCode: 'AT', dialCode: '+43',  postcodeRequired: true,  postalRegex: '/^(\\d{4})$/' },
+  // Africa
+  { name: 'South Africa',   isoCode: 'ZA', dialCode: '+27',  postcodeRequired: true,  postalRegex: '/^(\\d{4})$/' },
 ];
 
 const FALLBACK_POSTAL: Record<string, RegExp> = {

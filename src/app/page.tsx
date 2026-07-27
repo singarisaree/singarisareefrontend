@@ -8,6 +8,8 @@ import { SectionHeading } from '@/components/home/section-heading';
 import { CategoryCard } from '@/components/home/category-card';
 import { OurStorySection } from '@/components/home/our-story-section';
 import { NewsletterBanner } from '@/components/home/newsletter-banner';
+import { SingariShowcaseRow } from '@/components/home/singari-showcase-row';
+import { HomeShowcasePreload } from '@/components/home/home-showcase-preload';
 import { InstagramReelsSlider } from '@/components/home/instagram-reels-slider';
 import { HomeHashScroll } from '@/components/home/home-hash-scroll';
 import { ProductCard } from '@/components/products/product-card';
@@ -38,7 +40,7 @@ async function loadHomepageData() {
         .getProducts({ limit: '10', sortBy: 'createdAt', sortOrder: 'desc' })
         .catch(() => [] as Product[]),
     ]);
-    return { banners, categories, products, settings, instagramReels: [] };
+    return { banners, categories, products, settings, instagramReels: [], showcaseItems: [] };
   }
 }
 
@@ -55,7 +57,8 @@ async function HomeHero() {
 }
 
 async function HomeBelowFold() {
-  const { categories, products, settings, instagramReels = [] } = await loadHomepageData();
+  const { categories, products, settings, instagramReels = [], showcaseItems = [] } =
+    await loadHomepageData();
   const reelItems = instagramReels.map((reel) => ({
     id: reel.id,
     videoUrl: reel.videoUrl,
@@ -64,6 +67,7 @@ async function HomeBelowFold() {
 
   return (
     <>
+      <HomeShowcasePreload items={showcaseItems} />
       <StoreSettingsSync settings={settings} />
       <ProductRoutesPrefetch slugs={products.slice(0, 24).map((p) => p.slug)} />
       <TrustBar />
@@ -85,6 +89,21 @@ async function HomeBelowFold() {
           </div>
         </div>
       </section>
+
+      {showcaseItems.length > 0 ? (
+        <section
+          id="showcase"
+          className="scroll-mt-28 py-12 sm:scroll-mt-32 sm:py-16"
+          aria-labelledby="showcase-heading"
+        >
+          <div className="mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-10">
+            <SectionHeading title="SINGARI SHOWCASE" />
+            <div className="mt-8 -mx-4 overflow-x-auto overscroll-x-contain px-4 pb-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+              <SingariShowcaseRow items={showcaseItems} />
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <section
         id="new-arrivals"

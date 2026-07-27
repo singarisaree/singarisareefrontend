@@ -12,6 +12,7 @@ import {
   Ticket,
   Star,
   Copy,
+  Clapperboard,
   Settings,
   LogOut,
   Menu,
@@ -41,6 +42,7 @@ const navItems = [
   { href: '/admin/users', label: 'Users', icon: UserCircle, prefetchKey: 'admin-users' as const },
   { href: '/admin/reviews', label: 'Reviews', icon: Star, prefetchKey: 'admin-reviews' as const },
   { href: '/admin/escalation', label: 'Escalation', icon: ShieldAlert, prefetchKey: 'admin-orders' as const },
+  { href: '/admin/showcase', label: 'Singari Showcase', icon: Clapperboard, prefetchKey: 'admin-categories' as const },
   { href: '/admin/settings', label: 'Settings', icon: Settings, prefetchKey: 'admin-banners' as const },
 ];
 
