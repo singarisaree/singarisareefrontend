@@ -155,6 +155,7 @@ export const adminOrderService = {
     apiGet<{
       mode: ShiprocketShippingMode;
       couriers: ShiprocketCourierOption[];
+      defaultCourierId?: number | null;
     }>(`/dashboard/shipping/${orderId}/couriers`, { mode }),
   createShiprocketOrder: (
     orderId: string,

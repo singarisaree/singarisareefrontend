@@ -15,6 +15,7 @@ import { formatShortOrderNumber } from '@/lib/utils';
 import {
   formatEstimatedDeliveryMessage,
 } from '@/components/orders/order-payment-result';
+import { DeliveryTypeBadge } from '@/components/orders/delivery-type-badge';
 import {
   isOrderPaymentFailed,
   isOrderPaymentSuccess,
@@ -125,9 +126,17 @@ export function OrderPaymentResultDialog({
                   {formatShortOrderNumber(order?.orderNumber || orderId)}
                 </p>
                 {order ? (
-                  <p className="mt-3 text-sm text-brown-light">
-                    {formatEstimatedDeliveryMessage(order)}
-                  </p>
+                  <div className="mt-3 space-y-2">
+                    <DeliveryTypeBadge
+                      address={order.shippingAddress ?? undefined}
+                      type={order.deliveryType}
+                      size="md"
+                      className="normal-case"
+                    />
+                    <p className="text-sm text-brown-light">
+                      {formatEstimatedDeliveryMessage(order)}
+                    </p>
+                  </div>
                 ) : null}
                 <p className="mt-2 text-sm text-brown-light">
                   Order details will be sent on WhatsApp.

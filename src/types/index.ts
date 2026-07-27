@@ -176,6 +176,17 @@ export interface ShippingAddress {
   selectedCourier?: string;
   /** International orders: ETA chosen at checkout */
   selectedCourierEta?: string;
+  selectedShippingFee?: number;
+  /** Shiprocket courier_company_id from checkout */
+  selectedCourierCompanyId?: number;
+}
+
+export interface ShippingQuoteOption {
+  courier: string;
+  shippingFee: number;
+  estimatedDays: string;
+  currency: string;
+  courierCompanyId?: number;
 }
 
 export interface ShippingQuoteResult {
@@ -185,6 +196,7 @@ export interface ShippingQuoteResult {
   estimatedDays?: string;
   currency?: string;
   message?: string;
+  options?: ShippingQuoteOption[];
 }
 
 export interface QuickQuoteResult {

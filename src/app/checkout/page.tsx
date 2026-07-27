@@ -19,7 +19,7 @@ import { CountrySelect } from '@/components/checkout/country-select';
 import { CheckoutLoginDialog } from '@/components/checkout/checkout-login-dialog';
 import { useCartStore } from '@/stores/cart-store';
 import { orderService } from '@/services/store.service';
-import { formatPrice, formatColorLabel, formatCouponDiscountLabel } from '@/lib/utils';
+import { formatPrice, formatColorLabel, formatCouponDiscountLabel, formatMoney } from '@/lib/utils';
 import {
   calculateShippingCharge,
   isAddressReadyForShippingQuote,
@@ -39,6 +39,7 @@ import {
   normalizeNationalPhone,
   type ShippingCountry,
 } from '@/lib/countries';
+import type { ShippingQuoteOption } from '@/types';
 import { usePublicSettings } from '@/hooks/use-public-settings';
 import { useCartHydrated } from '@/hooks/use-cart-hydrated';
 import { useCartSync } from '@/hooks/use-cart-sync';
@@ -267,6 +268,11 @@ export default function CheckoutPage() {
   // For international orders — courier name + ETA from the quote, sent with the order
   const [intlCourier, setIntlCourier] = useState<string | null>(null);
   const [intlCourierEta, setIntlCourierEta] = useState<string | null>(null);
+  const [intlShippingFee, setIntlShippingFee] = useState<number | null>(null);
+  const [intlShippingCurrency, setIntlShippingCurrency] = useState('INR');
+  const [intlCourierCompanyId, setIntlCourierCompanyId] = useState<number | null>(null);
+  const [intlCourierOptions, setIntlCourierOptions] = useState<ShippingQuoteOption[]>([]);
+  const intlCourierRef = useRef<string | null>(null);
   const [countries, setCountries] = useState<ShippingCountry[]>(FALLBACK_SHIPPING_COUNTRIES);
   const shippingRequestId = useRef(0);
   const quickRequestId = useRef(0);
@@ -497,7 +503,33 @@ export default function CheckoutPage() {
       city: watchedCity,
       postalCode: watchedPostalCode,
       postalValid,
-    });
+    }) &&
+    (isIndia || (intlCourier != null && intlShippingFee != null));
+
+  const applyIntlCourierOption = useCallback((option: ShippingQuoteOption) => {
+    intlCourierRef.current = option.courier;
+    setIntlCourier(option.courier);
+    setIntlCourierEta(String(option.estimatedDays || '').trim() || null);
+    setIntlShippingFee(option.shippingFee);
+    setIntlShippingCurrency((option.currency || 'INR').trim().toUpperCase() || 'INR');
+    setIntlCourierCompanyId(
+      option.courierCompanyId != null && option.courierCompanyId > 0
+        ? option.courierCompanyId
+        : null,
+    );
+    setShippingCharge(Number(option.shippingFee) || 0);
+    const etaRaw = String(option.estimatedDays || '').trim();
+    const etaLabel = etaRaw ? formatDeliveryEstimate(etaRaw) : null;
+    setShippingMessage(
+      etaLabel
+        ? `Expected · ${etaLabel} via ${option.courier}`
+        : `International shipping via ${option.courier}`,
+    );
+  }, []);
+
+  useEffect(() => {
+    intlCourierRef.current = intlCourier;
+  }, [intlCourier]);
 
   useEffect(() => {
     setCouponInput(couponCode || '');
@@ -509,6 +541,11 @@ export default function CheckoutPage() {
     setShippingMessage('Enter a complete address to calculate shipping.');
     setIntlCourier(null);
     setIntlCourierEta(null);
+    setIntlShippingFee(null);
+    setIntlShippingCurrency('INR');
+    setIntlCourierCompanyId(null);
+    setIntlCourierOptions([]);
+    intlCourierRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -568,25 +605,42 @@ export default function CheckoutPage() {
           setShippingCharge(0);
           setShippingStatus('unavailable');
           setShippingMessage(quote.message || 'Delivery is not available for this location.');
+          setIntlCourierOptions([]);
+          setIntlCourier(null);
+          setIntlCourierEta(null);
+          setIntlShippingFee(null);
+          setIntlShippingCurrency('INR');
+          intlCourierRef.current = null;
           return;
         }
 
-        setShippingCharge(Number(quote.shippingFee) || 0);
-        setIntlCourier(quote.courier ?? null);
-        setIntlCourierEta(String(quote.estimatedDays || '').trim() || null);
-        const etaRaw = String(quote.estimatedDays || '').trim();
-        const etaLabel = etaRaw
-          ? `Expected · ${formatDeliveryEstimate(etaRaw)}`
-          : null;
-        setShippingMessage(
-          etaLabel
-            ? quote.courier
-              ? `${etaLabel} via ${quote.courier}`
-              : etaLabel
+        const options: ShippingQuoteOption[] =
+          quote.options?.length && quote.options
+            ? quote.options
             : quote.courier
-              ? `Lowest available fare via ${quote.courier}.`
-              : 'Lowest available international fare from Shiprocket X.',
-        );
+              ? [
+                  {
+                    courier: quote.courier,
+                    shippingFee: Number(quote.shippingFee) || 0,
+                    estimatedDays: String(quote.estimatedDays || ''),
+                    currency: quote.currency || 'INR',
+                  },
+                ]
+              : [];
+
+        setIntlCourierOptions(options);
+
+        if (!options.length) {
+          setShippingCharge(0);
+          setShippingStatus('unavailable');
+          setShippingMessage('Delivery is not available for this location.');
+          return;
+        }
+
+        const prev = intlCourierRef.current;
+        const pick =
+          (prev && options.find((o) => o.courier === prev)) || options[0];
+        applyIntlCourierOption(pick);
         setShippingStatus('ready');
       } catch {
         if (requestId !== shippingRequestId.current) return;
@@ -613,6 +667,7 @@ export default function CheckoutPage() {
     subtotal,
     settings,
     clearShippingQuote,
+    applyIntlCourierOption,
   ]);
 
   // Sync India shipping charge when Instant vs Standard selection changes
@@ -808,6 +863,10 @@ export default function CheckoutPage() {
               preferredShipping === 'QUICK' ? 'QUICK' : 'STANDARD',
             ...(intlCourier ? { selectedCourier: intlCourier } : {}),
             ...(intlCourierEta ? { selectedCourierEta: intlCourierEta } : {}),
+            ...(intlShippingFee != null ? { selectedShippingFee: intlShippingFee } : {}),
+            ...(intlCourierCompanyId != null
+              ? { selectedCourierCompanyId: intlCourierCompanyId }
+              : {}),
           },
           items: items.map((i) => ({
             productId: i.productId,
@@ -1532,6 +1591,49 @@ export default function CheckoutPage() {
                         <p className="mt-1 text-xs text-red-600">{postalValidation.message}</p>
                       ) : null}
                     </div>
+
+                    {!isIndia && intlCourierOptions.length > 0 ? (
+                      <div className="col-span-full">
+                        <p className="text-sm font-medium text-charcoal">International courier</p>
+                        <p className="mt-0.5 text-xs text-charcoal/70">
+                          Choose one of the lowest fares from Shiprocket (price &amp; delivery time).
+                        </p>
+                        <ul className="mt-3 space-y-2" role="radiogroup" aria-label="International courier">
+                          {intlCourierOptions.map((option) => {
+                            const selected = intlCourier === option.courier;
+                            const etaRaw = String(option.estimatedDays || '').trim();
+                            const etaLabel = etaRaw ? formatDeliveryEstimate(etaRaw) : 'ETA on dispatch';
+                            return (
+                              <li key={option.courier}>
+                                <button
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={selected}
+                                  disabled={shippingStatus === 'loading'}
+                                  onClick={() => applyIntlCourierOption(option)}
+                                  className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
+                                    selected
+                                      ? 'border-gold bg-gold/10 ring-1 ring-gold/40'
+                                      : 'border-gold/20 bg-white hover:border-gold/40'
+                                  }`}
+                                >
+                                  <span className="min-w-0">
+                                    <span className="block font-medium text-charcoal">{option.courier}</span>
+                                    <span className="text-xs text-charcoal/70">{etaLabel}</span>
+                                  </span>
+                                  <span className="shrink-0 font-medium text-charcoal">
+                                    {formatMoney(option.shippingFee, option.currency)}
+                                  </span>
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                        {shippingStatus === 'loading' ? (
+                          <p className="mt-2 text-xs text-charcoal/70">Updating courier options…</p>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 </section>
 
@@ -1573,6 +1675,32 @@ export default function CheckoutPage() {
                       </button>
                     </div>
                   )}
+                  {!isIndia && intlCourier && shippingStatus === 'ready' ? (
+                    <div
+                      className="mt-4 rounded-lg border border-gold/35 bg-gradient-to-br from-gold/10 to-beige/50 px-3.5 py-3"
+                      aria-live="polite"
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-charcoal/55">
+                        International shipping
+                      </p>
+                      <p className="mt-1.5 font-serif text-base text-charcoal">{intlCourier}</p>
+                      {intlCourierEta ? (
+                        <p className="mt-1 text-xs text-charcoal/75">
+                          {formatDeliveryEstimate(intlCourierEta)}
+                        </p>
+                      ) : null}
+                      <p className="mt-2 text-sm font-medium text-maroon">
+                        {intlShippingFee != null
+                          ? formatMoney(intlShippingFee, intlShippingCurrency)
+                          : formatMoney(shippingCharge, intlShippingCurrency)}
+                        {intlShippingCurrency !== 'INR' ? (
+                          <span className="ml-1.5 text-xs font-normal text-charcoal/60">
+                            ({intlShippingCurrency})
+                          </span>
+                        ) : null}
+                      </p>
+                    </div>
+                  ) : null}
                   <dl className="mt-4 space-y-2 text-sm">
                     <div className="flex min-w-0 justify-between gap-3"><dt>Subtotal</dt><dd className="shrink-0">{formatPrice(subtotal)}</dd></div>
                     {couponDiscount > 0 && (
@@ -1587,14 +1715,28 @@ export default function CheckoutPage() {
                       </div>
                     )}
                     <div className="flex min-w-0 justify-between gap-3">
-                      <dt>{quickQuote ? 'Delivery fee' : 'Shipping'}</dt>
-                      <dd className="shrink-0">
+                      <dt className="min-w-0">
+                        {quickQuote ? 'Delivery fee' : !isIndia && intlCourier ? 'Intl. shipping' : 'Shipping'}
+                        {!isIndia && intlCourier && shippingStatus === 'ready' ? (
+                          <span className="mt-0.5 block truncate text-xs font-normal text-charcoal/60">
+                            {intlCourier}
+                          </span>
+                        ) : shippingStatus === 'ready' && shippingMessage && isIndia ? (
+                          <span className="mt-0.5 block text-xs font-normal text-charcoal/60">
+                            {shippingMessage}
+                          </span>
+                        ) : null}
+                      </dt>
+                      <dd className="shrink-0 text-right">
                         {shippingStatus === 'loading'
                           ? '…'
                           : shippingStatus === 'ready'
                             ? shippingCharge === 0
                               ? 'Free'
-                              : formatPrice(shippingCharge)
+                              : formatMoney(
+                                  shippingCharge,
+                                  !isIndia ? intlShippingCurrency : 'INR',
+                                )
                             : '—'}
                       </dd>
                     </div>

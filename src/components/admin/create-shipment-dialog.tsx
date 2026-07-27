@@ -151,7 +151,9 @@ export function CreateShipmentDialog({
             : 'No courier partners available for this order',
         );
       } else {
-        setSelectedCourierId(result.couriers[0].courierId);
+        setSelectedCourierId(
+          result.defaultCourierId ?? result.couriers[0]?.courierId ?? null,
+        );
       }
     } catch (error) {
       setCouriers([]);
@@ -493,6 +495,13 @@ export function CreateShipmentDialog({
                   <p className="text-xs font-semibold uppercase tracking-wide text-[#94a3b8]">
                     {effectiveMode === 'quick' ? 'Instant hyperlocal partners' : 'Available courier partners'}
                   </p>
+                  {effectiveMode === 'international' && selectedCourier ? (
+                    <p className="text-xs text-[#64748b]">
+                      Pre-selected: customer chose{' '}
+                      <span className="font-medium text-[#0f172a]">{selectedCourier.courierName}</span>{' '}
+                      at checkout (change if needed).
+                    </p>
+                  ) : null}
                   {couriers.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-[#e2e8f0] px-4 py-8 text-center text-sm text-[#94a3b8]">
                       No courier partners available for this route.

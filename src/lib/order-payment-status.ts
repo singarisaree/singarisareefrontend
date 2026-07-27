@@ -1,6 +1,8 @@
 import type { UseQueryOptions } from '@tanstack/react-query';
 import { orderService } from '@/services/store.service';
 
+import type { ShippingAddress } from '@/types';
+
 export type OrderPaymentStatus = {
   status: string;
   paymentStatus: string;
@@ -8,6 +10,7 @@ export type OrderPaymentStatus = {
   estimatedDelivery?: string | null;
   deliveryType?: 'QUICK' | 'INDIA' | 'INTERNATIONAL';
   isHyderabadDelivery?: boolean;
+  shippingAddress?: Partial<ShippingAddress> | null;
 };
 
 const SUCCESS_STATUSES = new Set([

@@ -3,12 +3,12 @@ import { isIndiaShippingAddress } from '@/lib/shipping';
 
 export type DeliveryType = 'INDIA' | 'INTERNATIONAL' | 'QUICK';
 
-export function resolveDeliveryType(address?: ShippingAddress | null): DeliveryType {
+export function resolveDeliveryType(address?: Partial<ShippingAddress> | null): DeliveryType {
   if (!address) return 'INDIA';
-  if (address.preferredShipping === 'QUICK') return 'QUICK';
   if (!isIndiaShippingAddress(address.country, address.postalCode, address.countryCode)) {
     return 'INTERNATIONAL';
   }
+  if (address.preferredShipping === 'QUICK') return 'QUICK';
   return 'INDIA';
 }
 

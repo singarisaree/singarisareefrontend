@@ -91,21 +91,18 @@ function InstagramReelsSliderInner({ reels, className }: InstagramReelsSliderPro
     [reels],
   );
 
-  const [firstReady, setFirstReady] = useState(false);
   const [secondReady, setSecondReady] = useState(false);
 
   useEffect(() => {
     if (!items.length) return;
 
     let cancelled = false;
-    setFirstReady(false);
     setSecondReady(false);
 
     const urls = items.map((item) => item.videoSrc);
 
     void preloadInstagramReelsFirstBatch(urls).then(() => {
       if (cancelled) return;
-      setFirstReady(true);
       return preloadInstagramReelsSecondBatch(urls);
     }).then(() => {
       if (!cancelled) setSecondReady(true);
@@ -117,9 +114,6 @@ function InstagramReelsSliderInner({ reels, className }: InstagramReelsSliderPro
   }, [items]);
 
   if (!items.length) return null;
-
-  // No dark cards / spinner — hide section until first 5 are ready to play
-  if (!firstReady) return null;
 
   const visibleItems = secondReady ? items : items.slice(0, FIRST_BATCH);
 

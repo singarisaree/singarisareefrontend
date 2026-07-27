@@ -4,38 +4,18 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Clock3, Loader2, ShoppingBag, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatDate, formatShortOrderNumber, formatTime } from '@/lib/utils';
+import { formatShortOrderNumber } from '@/lib/utils';
+import { formatEstimatedDeliveryMessage as formatDeliverySummary } from '@/lib/order-delivery-display';
 import type { OrderPaymentStatus } from '@/lib/order-payment-status';
 import { PAYMENT_FAILED_MESSAGE, PAYMENT_PENDING_MESSAGE } from '@/lib/payment-failure-message';
 
 export function formatEstimatedDeliveryMessage(order: OrderPaymentStatus): string {
-  const type = order.deliveryType || 'INDIA';
-  const eta = order.estimatedDelivery ? new Date(order.estimatedDelivery) : null;
-  const hasEta = eta != null && Number.isFinite(eta.getTime());
-
-  if (type === 'QUICK') {
-    if (hasEta) {
-      const looksLikeDateOnly =
-        eta.getHours() === 0 && eta.getMinutes() === 0 && eta.getSeconds() === 0;
-      const arriveAt = looksLikeDateOnly
-        ? new Date(Date.now() + 60 * 60 * 1000)
-        : eta;
-      return `Estimated delivery: arrives by ${formatTime(arriveAt)} (Instant)`;
-    }
-    return 'Estimated delivery: arrives today (Instant)';
-  }
-
-  if (type === 'INTERNATIONAL') {
-    return hasEta
-      ? `Estimated delivery: expected by ${formatDate(eta)}`
-      : 'Estimated delivery: timeline confirmed after shipping';
-  }
-
-  if (order.isHyderabadDelivery) {
-    return 'Estimated delivery: arrives in 2 days';
-  }
-
-  return 'Estimated delivery: expected in 3–7 days';
+  return formatDeliverySummary({
+    deliveryType: order.deliveryType,
+    estimatedDelivery: order.estimatedDelivery,
+    isHyderabadDelivery: order.isHyderabadDelivery,
+    shippingAddress: order.shippingAddress ?? undefined,
+  });
 }
 
 function BrandMark() {

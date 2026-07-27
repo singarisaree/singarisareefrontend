@@ -10,6 +10,24 @@ export function formatPrice(amount: number): string {
   return `Rs. ${formatAmount(amount)}`;
 }
 
+/** Storefront money display; INR uses Rs., other ISO codes use Intl currency. */
+export function formatMoney(amount: number, currency = 'INR'): string {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return formatPrice(0);
+  const code = (currency || 'INR').trim().toUpperCase();
+  if (code === 'INR') return formatPrice(value);
+  try {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `${code} ${formatAmount(value)}`;
+  }
+}
+
 /** Indian number format without currency symbol — use with Rs. / MRP labels */
 export function formatAmount(amount: number): string {
   const value = Number(amount);

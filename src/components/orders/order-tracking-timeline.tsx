@@ -15,17 +15,13 @@ import {
   getReturnFlowIndex,
   getReturnStepLabel,
 } from '@/lib/order-return-tracking';
-import { cn, formatDate, formatPrice, formatTime, getOrderStatusLabel } from '@/lib/utils';
+import {
+  getDeliveryTrackingProfile,
+  getTrackingStepLabel,
+  mapOrderStatusToTrackingStepIndex,
+} from '@/lib/order-delivery-display';
+import { cn, formatDate, formatPrice, formatTime } from '@/lib/utils';
 import type { Order, ReturnRequest, ReturnRequestTrackingEntry } from '@/types';
-
-const TRACKING_STEPS = [
-  'PLACED',
-  'CONFIRMED',
-  'READY_TO_SHIP',
-  'SHIPPED',
-  'IN_TRANSIT',
-  'DELIVERED',
-] as const;
 
 type TrackingOrder = Pick<
   Order,
@@ -37,7 +33,8 @@ type TrackingOrder = Pick<
   | 'refundUtr'
   | 'refundedAt'
   | 'payments'
->;
+> &
+  Partial<Pick<Order, 'shippingAddress'>>;
 
 type TimelineStep =
   | { kind: 'order'; step: string; timestamp?: string }
@@ -153,22 +150,47 @@ function getStepLabelClass(isCurrent: boolean, isDone: boolean, isAdmin: boolean
   return isAdmin ? 'text-[#94a3b8]' : 'text-brown-light';
 }
 
-function getCurrentStepIndex(order: TrackingOrder, history: Order['trackingHistory']): number {
+function getCurrentStepIndex(
+  order: TrackingOrder,
+  history: Order['trackingHistory'],
+  profile: ReturnType<typeof getDeliveryTrackingProfile>,
+): number {
   const postDeliveryStatuses = new Set(['RETURNED', 'REFUNDED', 'CANCELLED']);
   if (postDeliveryStatuses.has(order.status)) {
-    return TRACKING_STEPS.length - 1;
+    return profile.steps.length - 1;
   }
 
-  const orderStatusIndex = TRACKING_STEPS.indexOf(order.status as (typeof TRACKING_STEPS)[number]);
-  if (orderStatusIndex >= 0) return orderStatusIndex;
-
+  const fromOrder = mapOrderStatusToTrackingStepIndex(order.status, profile);
   const latestTrackingStatus = history?.[0]?.status;
-  const trackingStatusIndex = TRACKING_STEPS.indexOf(
-    latestTrackingStatus as (typeof TRACKING_STEPS)[number],
-  );
-  if (trackingStatusIndex >= 0) return trackingStatusIndex;
+  const fromTracking = latestTrackingStatus
+    ? mapOrderStatusToTrackingStepIndex(latestTrackingStatus, profile)
+    : fromOrder;
 
-  return 0;
+  return Math.max(fromOrder, fromTracking);
+}
+
+function buildStepStatusUpdates(
+  profile: ReturnType<typeof getDeliveryTrackingProfile>,
+  sortedHistory: NonNullable<Order['trackingHistory']>,
+  continueFromDelivered: boolean,
+  order: TrackingOrder,
+) {
+  const map = new Map<string, { timestamp: string; description?: string }>();
+  for (const step of profile.steps) {
+    const group = profile.statusGroups[step] || [step];
+    for (const entry of sortedHistory) {
+      if (group.includes(entry.status) && !map.has(step)) {
+        map.set(step, { timestamp: entry.timestamp, description: entry.description });
+      }
+    }
+  }
+  if (continueFromDelivered && !map.has('DELIVERED')) {
+    const deliveredAt = getOrderDeliveredAt(order as Order);
+    if (deliveredAt) {
+      map.set('DELIVERED', { timestamp: deliveredAt.toISOString() });
+    }
+  }
+  return map;
 }
 
 interface OrderTrackingTimelineProps {
@@ -203,6 +225,11 @@ export function OrderTrackingTimeline({
   } = returnTimeline;
   const hasReturnFlow = horizontalReturnSteps.length > 0 || Boolean(refundEntry);
 
+  const trackingProfile = useMemo(
+    () => getDeliveryTrackingProfile(order.shippingAddress),
+    [order.shippingAddress],
+  );
+
   const sortedHistory = useMemo(
     () => [...history].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
     [history],
@@ -216,10 +243,13 @@ export function OrderTrackingTimeline({
     [returnHistory],
   );
 
-  const currentStep = getCurrentStepIndex(order, history);
+  const currentStep = getCurrentStepIndex(order, history, trackingProfile);
   const orderSteps = useMemo(
-    () => (continueFromDelivered ? (['DELIVERED'] as const) : TRACKING_STEPS),
-    [continueFromDelivered],
+    () =>
+      continueFromDelivered
+        ? (['DELIVERED'] as const)
+        : (trackingProfile.steps as readonly string[]),
+    [continueFromDelivered, trackingProfile.steps],
   );
   const postRefundSteps = refundEntry ? (['REFUNDED'] as const) : ([] as const);
   const combinedHorizontalSteps = hasReturnFlow
@@ -234,21 +264,10 @@ export function OrderTrackingTimeline({
     return orderSteps.length + getReturnFlowIndex(returnCurrentStatus, effectiveReturn);
   })();
 
-  const statusUpdates = useMemo(() => {
-    const map = new Map<string, { timestamp: string; description?: string }>();
-    for (const entry of sortedHistory) {
-      if (!map.has(entry.status)) {
-        map.set(entry.status, { timestamp: entry.timestamp, description: entry.description });
-      }
-    }
-    if (continueFromDelivered && !map.has('DELIVERED')) {
-      const deliveredAt = getOrderDeliveredAt(order as Order);
-      if (deliveredAt) {
-        map.set('DELIVERED', { timestamp: deliveredAt.toISOString() });
-      }
-    }
-    return map;
-  }, [sortedHistory, continueFromDelivered, order]);
+  const statusUpdates = useMemo(
+    () => buildStepStatusUpdates(trackingProfile, sortedHistory, continueFromDelivered, order),
+    [trackingProfile, sortedHistory, continueFromDelivered, order],
+  );
 
   const timelineSteps = useMemo<TimelineStep[]>(() => {
     const steps: TimelineStep[] = orderSteps.map((step) => ({
@@ -319,7 +338,7 @@ export function OrderTrackingTimeline({
 
   const getHorizontalStepLabel = (step: string, index: number) => {
     if (index < orderSteps.length) {
-      return getOrderStatusLabel(step);
+      return getTrackingStepLabel(step, trackingProfile);
     }
     if (step === 'REFUNDED') {
       return getReturnStepLabel(step);
@@ -407,7 +426,7 @@ export function OrderTrackingTimeline({
                   </div>
                   <div className="pb-3 pt-0.5">
                     <p className={cn('text-sm', getStepLabelClass(isCurrent, isDone, isAdmin))}>
-                      {getOrderStatusLabel(item.step)}
+                      {getTrackingStepLabel(item.step, trackingProfile)}
                     </p>
                     {update && (
                       <p className={cn('mt-0.5 text-xs', isAdmin ? 'text-[#94a3b8]' : 'text-brown-light')}>

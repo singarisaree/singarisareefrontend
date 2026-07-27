@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { resolveStorefrontImageUrl } from '@/lib/image';
 import { preloadShowcaseVideo, preloadShowcaseVideos } from '@/lib/preload-showcase-videos';
@@ -90,6 +90,7 @@ const ShowcaseTile = memo(function ShowcaseTile({
         <video
           ref={ref}
           src={videoSrc}
+          poster={item.imageUrl ? resolveStorefrontImageUrl(item.imageUrl) : undefined}
           className="absolute inset-0 h-full w-full object-cover"
           muted
           playsInline
@@ -129,22 +130,12 @@ export function SingariShowcaseRow({ items }: Props) {
     [items],
   );
 
-  const [ready, setReady] = useState(false);
-
   useEffect(() => {
     if (!prepared.length) return;
-    let cancelled = false;
-    setReady(false);
-    void preloadShowcaseVideos(prepared.map((p) => p.videoSrc)).then(() => {
-      if (!cancelled) setReady(true);
-    });
-    return () => {
-      cancelled = true;
-    };
+    void preloadShowcaseVideos(prepared.map((p) => p.videoSrc));
   }, [prepared]);
 
   if (!prepared.length) return null;
-  if (!ready) return null;
 
   return (
     <div className="flex w-max gap-3 sm:gap-4">

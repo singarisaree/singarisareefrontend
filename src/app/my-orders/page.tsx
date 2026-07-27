@@ -9,6 +9,7 @@ import { ChevronDown, ChevronRight, RotateCcw, ShoppingBag } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/layout/footer';
 import { OrderTrackingTimeline } from '@/components/orders/order-tracking-timeline';
+import { DeliveryTypeBadge } from '@/components/orders/delivery-type-badge';
 import { StoreCreditCouponCard } from '@/components/orders/store-credit-coupon-card';
 import { shouldHideOrderTracking } from '@/components/orders/order-payment-status-notice';
 import { getCustomerFacingOrderStatus } from '@/lib/order-return';
@@ -29,19 +30,15 @@ import {
 import {
   cn,
   formatPrice,
-  formatDate,
-  formatTime,
   formatDateTime,
   getOrderStatusColor,
   getOrderStatusLabel,
   formatShortOrderNumber,
-  getOrderListDateText,
   formatPaymentMethodLabel,
   formatCouponDiscountLabel,
 } from '@/lib/utils';
 import { useCustomerOrderRealtime } from '@/hooks/use-customer-order-realtime';
-import { resolveDeliveryType } from '@/lib/delivery-type';
-import { isHyderabadDeliveryArea } from '@/lib/shipping';
+import { getOrderListStatusLine, resolveDeliveryType, formatInternationalDeliveryHint } from '@/lib/order-delivery-display';
 import type { Order, ReturnRequest } from '@/types';
 
 function OrderCardSkeleton() {
@@ -58,78 +55,6 @@ function OrderCardSkeleton() {
       </div>
     </div>
   );
-}
-
-function getOrderStatusLine(order: Order, displayStatus: string): string {
-  const deliveredAt = order.shipping?.deliveredAt;
-  const deliveredUpdate = order.trackingHistory?.find((e) => e.status === 'DELIVERED');
-  const deliveredTimestamp = deliveredAt || deliveredUpdate?.timestamp;
-  const deliveryType = resolveDeliveryType(order.shippingAddress);
-  const eta = order.estimatedDelivery ? new Date(order.estimatedDelivery) : null;
-  const hasEta = eta != null && Number.isFinite(eta.getTime());
-  const hyderabad =
-    deliveryType === 'INDIA' &&
-    isHyderabadDeliveryArea({
-      city: order.shippingAddress?.city,
-      postalCode: order.shippingAddress?.postalCode,
-      landmark: order.shippingAddress?.landmark,
-      state: order.shippingAddress?.state,
-    });
-
-  if (displayStatus === 'DELIVERED' && deliveredTimestamp) {
-    return `Delivered on ${formatDate(deliveredTimestamp)}`;
-  }
-  if (displayStatus === 'PAYMENT_PENDING') {
-    return 'Complete payment to confirm your order';
-  }
-  if (displayStatus === 'FAILED') {
-    return 'Payment failed — refund in 3–7 days if debited';
-  }
-  if (['READY_TO_SHIP', 'SHIPPED', 'IN_TRANSIT'].includes(displayStatus)) {
-    if (deliveryType === 'QUICK') {
-      if (hasEta) {
-        const looksLikeDateOnly =
-          eta.getHours() === 0 && eta.getMinutes() === 0 && eta.getSeconds() === 0;
-        if (!looksLikeDateOnly) {
-          return `Instant delivery · Arrives by ${formatTime(eta)}`;
-        }
-      }
-      return 'Instant delivery · On the way';
-    }
-    if (deliveryType === 'INTERNATIONAL') {
-      return hasEta
-        ? `Expected by ${formatDate(eta)}`
-        : 'International order · On the way';
-    }
-    if (hyderabad) {
-      return 'Arrives in 2 days';
-    }
-    return 'Expected in 3–7 days';
-  }
-  if (displayStatus === 'PLACED' || displayStatus === 'CONFIRMED') {
-    if (deliveryType === 'QUICK') {
-      if (hasEta) {
-        const looksLikeDateOnly =
-          eta.getHours() === 0 && eta.getMinutes() === 0 && eta.getSeconds() === 0;
-        if (!looksLikeDateOnly) {
-          return `Instant delivery · Arrives by ${formatTime(eta)}`;
-        }
-      }
-      return 'Instant delivery · Arrives today';
-    }
-    if (deliveryType === 'INTERNATIONAL') {
-      return hasEta
-        ? `Expected by ${formatDate(eta)}`
-        : 'Delivery timeline confirmed after shipping quote';
-    }
-    // Hyderabad Standard: always 2 days
-    if (hyderabad) {
-      return 'Arrives in 2 days';
-    }
-    // Other India cities: fixed 3–7 day window
-    return 'Expected in 3–7 days';
-  }
-  return getOrderListDateText({ ...order, status: displayStatus });
 }
 
 export default function MyOrdersPage() {
@@ -290,7 +215,9 @@ function MyOrdersPageContent() {
                 const returnBarStatus = getReturnBarStatusLabel(order);
                 const returnButtonLabel = getReturnBarButtonLabel(order, isReturnExpanded);
                 const returnWindowClosed = isReturnWindowClosed(order);
-                const statusLine = getOrderStatusLine(order, displayStatus);
+                const statusLine = getOrderListStatusLine(order, displayStatus);
+                const deliveryType = resolveDeliveryType(order.shippingAddress);
+                const intlCourierHint = formatInternationalDeliveryHint(order.shippingAddress);
                 const payment = order.payments?.[0];
                 const isRefunded = displayStatus === 'REFUNDED';
                 const paymentStatus = isRefunded
@@ -383,6 +310,9 @@ function MyOrdersPageContent() {
                             <p className="mt-0.5 text-xs text-brown-light">
                               {formatDateTime(order.createdAt)}
                             </p>
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                              <DeliveryTypeBadge address={order.shippingAddress} size="md" />
+                            </div>
                           </div>
                           <span
                             className={cn(
@@ -395,7 +325,10 @@ function MyOrdersPageContent() {
                         </div>
 
                         {!isExpanded ? (
-                          <p className="mt-2 text-sm text-charcoal">{statusLine}</p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <DeliveryTypeBadge address={order.shippingAddress} />
+                            <p className="text-sm text-charcoal">{statusLine}</p>
+                          </div>
                         ) : null}
 
                         <div className="mt-2 flex items-center justify-between gap-2">
@@ -526,6 +459,21 @@ function MyOrdersPageContent() {
 
                         {!shouldHideOrderTracking(order) && (
                           <div className="mt-5">
+                            {deliveryType === 'INTERNATIONAL' && intlCourierHint ? (
+                              <p className="mb-2 text-xs text-brown-light">
+                                Courier:{' '}
+                                <span className="font-medium text-charcoal">
+                                  {order.shippingAddress.selectedCourier || intlCourierHint}
+                                </span>
+                                {order.shippingAddress.selectedCourier &&
+                                order.shippingAddress.selectedCourierEta ? (
+                                  <span>
+                                    {' '}
+                                    · {formatInternationalDeliveryHint(order.shippingAddress)}
+                                  </span>
+                                ) : null}
+                              </p>
+                            ) : null}
                             <OrderTrackingTimeline order={order} />
                           </div>
                         )}
