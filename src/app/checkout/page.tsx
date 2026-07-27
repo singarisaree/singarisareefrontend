@@ -20,6 +20,7 @@ import { CheckoutLoginDialog } from '@/components/checkout/checkout-login-dialog
 import { useCartStore } from '@/stores/cart-store';
 import { orderService } from '@/services/store.service';
 import { formatPrice, formatColorLabel, formatCouponDiscountLabel, formatMoney } from '@/lib/utils';
+import { getApiErrorMessage, isConnectionError } from '@/lib/api-error';
 import {
   calculateShippingCharge,
   isAddressReadyForShippingQuote,
@@ -640,11 +641,15 @@ export default function CheckoutPage() {
           (prev && options.find((o) => o.courier === prev)) || options[0];
         applyIntlCourierOption(pick);
         setShippingStatus('ready');
-      } catch {
+      } catch (error) {
         if (requestId !== shippingRequestId.current) return;
         setShippingCharge(0);
         setShippingStatus('error');
-        setShippingMessage('Unable to calculate shipping right now. Please try again.');
+        setShippingMessage(
+          isConnectionError(error)
+            ? 'Cannot reach the server. Check your connection and try again.'
+            : getApiErrorMessage(error, 'Unable to calculate shipping right now. Please try again.'),
+        );
       }
     }, 450);
 
