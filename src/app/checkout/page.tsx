@@ -23,6 +23,7 @@ import { formatPrice, formatColorLabel, formatCouponDiscountLabel, formatMoney }
 import {
   calculateShippingCharge,
   isAddressReadyForShippingQuote,
+  isInternationalCountryReadyForShippingQuote,
   isHyderabadDeliveryArea,
   isIndiaShippingAddress,
   isInstantDeliveryFree,
@@ -522,9 +523,7 @@ export default function CheckoutPage() {
     const etaRaw = String(option.estimatedDays || '').trim();
     const etaLabel = etaRaw ? formatDeliveryEstimate(etaRaw) : null;
     setShippingMessage(
-      etaLabel
-        ? `Expected · ${etaLabel} via ${option.courier}`
-        : `International shipping via ${option.courier}`,
+      etaLabel ? etaLabel : 'International shipping',
     );
   }, []);
 
@@ -559,20 +558,12 @@ export default function CheckoutPage() {
     }
 
     if (
-      !isAddressReadyForShippingQuote({
+      !isInternationalCountryReadyForShippingQuote({
         country: watchedCountry,
         countryCode: watchedCountryCode,
-        state: watchedState,
-        city: watchedCity,
-        postalCode: watchedPostalCode,
-        postalValid,
       })
     ) {
       clearShippingQuote();
-      if (watchedPostalCode && !postalValid) {
-        setShippingMessage(postalValidation.message);
-        setShippingStatus('error');
-      }
       return;
     }
 
@@ -592,10 +583,10 @@ export default function CheckoutPage() {
           {
             country: watchedCountry,
             countryCode: watchedCountryCode,
-            state: watchedState,
-            city: watchedCity,
-            postalCode: watchedPostalCode,
-            addressLine1: watchedAddressLine1,
+            state: watchedState || '',
+            city: watchedCity || '',
+            postalCode: watchedPostalCode || '',
+            addressLine1: watchedAddressLine1 || '',
             addressLine2: watchedAddressLine2,
             landmark: watchedLandmark,
           },
@@ -662,14 +653,6 @@ export default function CheckoutPage() {
     isIndia,
     watchedCountry,
     watchedCountryCode,
-    watchedPostalCode,
-    watchedCity,
-    watchedState,
-    watchedAddressLine1,
-    watchedAddressLine2,
-    watchedLandmark,
-    postalValid,
-    postalValidation.message,
     items,
     subtotal,
     settings,
@@ -1618,45 +1601,6 @@ export default function CheckoutPage() {
                       ) : null}
                     </div>
 
-                    {!isIndia && intlCourierOptions.length > 0 ? (
-                      <div className="col-span-full">
-                        <p className="text-sm font-medium text-charcoal">International shipping</p>
-                        <p className="mt-0.5 text-xs text-charcoal/70">
-                          Fare is based on your country and total product weight
-                          {intlChargeableWeightKg != null
-                            ? ` (${intlChargeableWeightKg.toFixed(2)} kg chargeable).`
-                            : '.'}{' '}
-                          Live courier assignment happens when we dispatch your order.
-                        </p>
-                        <ul className="mt-3 space-y-2" role="radiogroup" aria-label="International shipping">
-                          {intlCourierOptions.map((option) => {
-                            const selected = intlCourier === option.courier;
-                            const etaRaw = String(option.estimatedDays || '').trim();
-                            const etaLabel = etaRaw ? formatDeliveryEstimate(etaRaw) : 'ETA on dispatch';
-                            return (
-                              <li key={option.courier}>
-                                <div
-                                  role="radio"
-                                  aria-checked={selected}
-                                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-gold bg-gold/10 px-3 py-2.5 text-left text-sm ring-1 ring-gold/40"
-                                >
-                                  <span className="min-w-0">
-                                    <span className="block font-medium text-charcoal">{option.courier}</span>
-                                    <span className="text-xs text-charcoal/70">{etaLabel}</span>
-                                  </span>
-                                  <span className="shrink-0 font-medium text-charcoal">
-                                    {formatMoney(option.shippingFee, option.currency)}
-                                  </span>
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                        {shippingStatus === 'loading' ? (
-                          <p className="mt-2 text-xs text-charcoal/70">Calculating shipping…</p>
-                        ) : null}
-                      </div>
-                    ) : null}
                   </div>
                 </section>
 
@@ -1698,32 +1642,6 @@ export default function CheckoutPage() {
                       </button>
                     </div>
                   )}
-                  {!isIndia && intlCourier && shippingStatus === 'ready' ? (
-                    <div
-                      className="mt-4 rounded-lg border border-gold/35 bg-gradient-to-br from-gold/10 to-beige/50 px-3.5 py-3"
-                      aria-live="polite"
-                    >
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-charcoal/55">
-                        International shipping
-                      </p>
-                      <p className="mt-1.5 font-serif text-base text-charcoal">{intlCourier}</p>
-                      {intlCourierEta ? (
-                        <p className="mt-1 text-xs text-charcoal/75">
-                          {formatDeliveryEstimate(intlCourierEta)}
-                        </p>
-                      ) : null}
-                      <p className="mt-2 text-sm font-medium text-maroon">
-                        {intlShippingFee != null
-                          ? formatMoney(intlShippingFee, intlShippingCurrency)
-                          : formatMoney(shippingCharge, intlShippingCurrency)}
-                        {intlShippingCurrency !== 'INR' ? (
-                          <span className="ml-1.5 text-xs font-normal text-charcoal/60">
-                            ({intlShippingCurrency})
-                          </span>
-                        ) : null}
-                      </p>
-                    </div>
-                  ) : null}
                   {isIndia && preferredShipping === 'QUICK' && quickQuote && shippingStatus === 'ready' ? (
                     <div
                       className="mt-4 rounded-lg border border-maroon/25 bg-maroon/[0.06] px-3.5 py-3"
@@ -1757,18 +1675,18 @@ export default function CheckoutPage() {
                       <dt className="min-w-0">
                         {preferredShipping === 'QUICK' && quickQuote
                           ? 'Instant delivery'
-                          : quickQuote
-                            ? 'Delivery fee'
-                            : !isIndia && intlCourier
-                              ? 'Intl. shipping'
+                          : !isIndia && shippingStatus === 'ready'
+                            ? 'International shipping'
+                            : quickQuote
+                              ? 'Delivery fee'
                               : 'Shipping'}
                         {preferredShipping === 'QUICK' && quickQuote && shippingStatus === 'ready' ? (
                           <span className="mt-0.5 block text-xs font-medium text-maroon">
                             {formatQuickEta(quickQuote.etaMinutes)}
                           </span>
-                        ) : !isIndia && intlCourier && shippingStatus === 'ready' ? (
-                          <span className="mt-0.5 block truncate text-xs font-normal text-charcoal/60">
-                            {intlCourier}
+                        ) : !isIndia && shippingStatus === 'ready' && shippingMessage ? (
+                          <span className="mt-0.5 block text-xs font-normal text-charcoal/60">
+                            {shippingMessage}
                           </span>
                         ) : shippingStatus === 'ready' && shippingMessage && isIndia && preferredShipping !== 'QUICK' ? (
                           <span className="mt-0.5 block text-xs font-normal text-charcoal/60">

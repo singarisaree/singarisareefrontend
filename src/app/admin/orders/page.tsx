@@ -95,6 +95,7 @@ export default function AdminOrdersPage() {
       ),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
+    refetchInterval: 5000,
   });
 
   const orders = ordersResult?.data ?? [];

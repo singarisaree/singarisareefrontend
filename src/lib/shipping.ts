@@ -91,6 +91,15 @@ export function isAddressReadyForShippingQuote(input: {
   );
 }
 
+/** International slab shipping needs only destination country (+ cart weight on the server). */
+export function isInternationalCountryReadyForShippingQuote(input: {
+  country?: string;
+  countryCode?: string;
+}): boolean {
+  if (!input.country?.trim() || !input.countryCode?.trim()) return false;
+  return !isIndiaShippingAddress(input.country, undefined, input.countryCode);
+}
+
 export function calculateOrderSummary(
   subtotal: number,
   couponDiscount: number,
