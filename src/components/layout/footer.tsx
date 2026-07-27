@@ -6,7 +6,7 @@ import { BrandLogo } from '@/components/layout/brand-logo';
 import { STORE_CONTACT } from '@/lib/store-contact';
 
 const DEFAULT_INSTAGRAM_URL =
-  'https://www.instagram.com/sareeby_singari/?utm_source=ig_web_button_share_sheet';
+  'https://www.instagram.com/sareeby_singari?igsh=eThqc3V5bzZlOXZj';
 
 interface FooterProps {
   settings?: {
@@ -23,7 +23,7 @@ interface FooterProps {
 export function Footer({ settings }: FooterProps) {
   const email = settings?.store_email || STORE_CONTACT.email;
   const whatsappUrl = 'https://wa.me/919490458789';
-  const instagramUrl = settings?.instagram_url || DEFAULT_INSTAGRAM_URL;
+  const instagramUrl = DEFAULT_INSTAGRAM_URL;
 
   return (
     <footer className="bg-charcoal-dark text-white">
@@ -115,8 +115,8 @@ export function Footer({ settings }: FooterProps) {
             </ul>
           </div>
 
-          {/* Payment */}
-          <div className="col-span-2 sm:col-span-1 lg:col-span-1">
+          {/* Payment — desktop/tablet only */}
+          <div className="hidden sm:col-span-1 sm:block lg:col-span-1">
             <h4 className="mb-4 text-xs font-semibold tracking-[0.2em] text-gold">WE ACCEPT</h4>
             <div className="flex flex-wrap gap-2">
               {['Visa', 'Mastercard', 'UPI', 'Paytm'].map((method) => (
