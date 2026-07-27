@@ -156,6 +156,8 @@ export const adminOrderService = {
       mode: ShiprocketShippingMode;
       couriers: ShiprocketCourierOption[];
       defaultCourierId?: number | null;
+      chargeableWeightKg?: number;
+      destinationCountryCode?: string;
     }>(`/dashboard/shipping/${orderId}/couriers`, { mode }),
   createShiprocketOrder: (
     orderId: string,

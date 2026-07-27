@@ -89,6 +89,11 @@ export function CreateShipmentDialog({
   const [loadingCouriers, setLoadingCouriers] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [couriersLoaded, setCouriersLoaded] = useState(false);
+  const [courierLoadError, setCourierLoadError] = useState<string | null>(null);
+  const [courierQuoteMeta, setCourierQuoteMeta] = useState<{
+    chargeableWeightKg?: number;
+    destinationCountryCode?: string;
+  } | null>(null);
   const [bulkQuotes, setBulkQuotes] = useState<BulkQuoteRow[]>([]);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
   const [quotesLoaded, setQuotesLoaded] = useState(false);
@@ -106,6 +111,8 @@ export function CreateShipmentDialog({
     setCouriers([]);
     setSelectedCourierId(null);
     setCouriersLoaded(false);
+    setCourierLoadError(null);
+    setCourierQuoteMeta(null);
     setLoadingCouriers(false);
     setSubmitting(false);
     setBulkQuotes([]);
@@ -134,31 +141,44 @@ export function CreateShipmentDialog({
     setCouriers([]);
     setSelectedCourierId(null);
     setCouriersLoaded(false);
+    setCourierLoadError(null);
+    setCourierQuoteMeta(null);
   };
 
   const fetchCouriersForOrder = async (targetOrderId: string, mode: ShiprocketShippingMode) => {
     setLoadingCouriers(true);
     setCouriersLoaded(false);
+    setCourierLoadError(null);
+    setCourierQuoteMeta(null);
     setSelectedCourierId(null);
     try {
       const result = await adminOrderService.getAvailableCouriers(targetOrderId, mode);
       setCouriers(result.couriers);
+      setCourierQuoteMeta({
+        chargeableWeightKg: result.chargeableWeightKg,
+        destinationCountryCode: result.destinationCountryCode,
+      });
       setCouriersLoaded(true);
       if (result.couriers.length === 0) {
-        toast.error(
+        const emptyMsg =
           mode === 'quick'
             ? 'Quick delivery is not available for this route'
-            : 'No courier partners available for this order',
-        );
+            : mode === 'international'
+              ? 'No Shiprocket X couriers for this destination, weight, or postal code. Check product weights (grams) and the order country.'
+              : 'No courier partners available for this order';
+        setCourierLoadError(emptyMsg);
+        toast.error(emptyMsg);
       } else {
         setSelectedCourierId(
           result.defaultCourierId ?? result.couriers[0]?.courierId ?? null,
         );
       }
     } catch (error) {
+      const message = getApiErrorMessage(error, 'Could not load shipping options');
       setCouriers([]);
+      setCourierLoadError(message);
       setCouriersLoaded(true);
-      toast.error(getApiErrorMessage(error, 'Could not load shipping options'));
+      toast.error(message);
     } finally {
       setLoadingCouriers(false);
     }
@@ -482,7 +502,9 @@ export function CreateShipmentDialog({
                 <p className="text-xs text-[#64748b]">
                   {effectiveMode === 'quick'
                     ? 'Instant hyperlocal partners for this route. Requires delivery coordinates on the order.'
-                    : 'Available partners are based on the order weight, size, and delivery pincode.'}
+                    : effectiveMode === 'international'
+                      ? 'Live Shiprocket X courier options for this destination, chargeable weight, and declared value.'
+                      : 'Available partners are based on the order weight, size, and delivery pincode.'}
                 </p>
                 {loadingCouriers && (
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#64748b]">
@@ -492,19 +514,48 @@ export function CreateShipmentDialog({
                 )}
               </div>
 
-              {couriersLoaded && (
+              {(loadingCouriers || couriersLoaded) && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-[#94a3b8]">
-                    {effectiveMode === 'quick' ? 'Instant hyperlocal partners' : 'Available courier partners'}
+                    {effectiveMode === 'quick'
+                      ? 'Instant hyperlocal partners'
+                      : effectiveMode === 'international'
+                        ? 'Shiprocket X couriers'
+                        : 'Available courier partners'}
                   </p>
-                  {effectiveMode === 'international' && selectedCourier ? (
+                  {effectiveMode === 'international' && courierQuoteMeta && (
                     <p className="text-xs text-[#64748b]">
-                      Pre-selected: customer chose{' '}
-                      <span className="font-medium text-[#0f172a]">{selectedCourier.courierName}</span>{' '}
-                      at checkout (change if needed).
+                      Destination{' '}
+                      <span className="font-medium text-[#0f172a]">
+                        {courierQuoteMeta.destinationCountryCode ?? '—'}
+                      </span>
+                      {courierQuoteMeta.chargeableWeightKg != null && (
+                        <>
+                          {' '}
+                          · Chargeable weight{' '}
+                          <span className="font-medium text-[#0f172a]">
+                            {courierQuoteMeta.chargeableWeightKg} kg
+                          </span>
+                        </>
+                      )}
                     </p>
-                  ) : null}
-                  {couriers.length === 0 ? (
+                  )}
+                  {courierLoadError && (
+                    <div className="rounded-lg border border-[#fecaca] bg-[#fef2f2] px-3 py-3 text-sm text-[#991b1b]">
+                      <p>{courierLoadError}</p>
+                      {orderId && (
+                        <button
+                          type="button"
+                          disabled={loadingCouriers || submitting}
+                          onClick={() => void fetchCouriersForOrder(orderId, effectiveMode)}
+                          className="mt-2 text-xs font-semibold text-[#0f172a] underline underline-offset-2 disabled:opacity-40"
+                        >
+                          Retry loading couriers
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {couriers.length === 0 && !courierLoadError && couriersLoaded && !loadingCouriers ? (
                     <div className="rounded-lg border border-dashed border-[#e2e8f0] px-4 py-8 text-center text-sm text-[#94a3b8]">
                       No courier partners available for this route.
                     </div>
