@@ -234,6 +234,7 @@ export function CreateShipmentDialog({
             orderId: q.orderId,
             courierId: q.courierId,
             courierName: q.courierName,
+            ...(q.etd?.trim() ? { courierEtd: q.etd.trim() } : {}),
           })),
         );
         toast.dismiss(toastId);
@@ -283,6 +284,7 @@ export function CreateShipmentDialog({
         ...(selectedCourier.courierId > 0 ? { courierId: selectedCourier.courierId } : {}),
         ...(effectiveMode !== 'quick' ? { pickupDate: pickupDateIso } : {}),
         courierName: selectedCourier.courierName,
+        ...(selectedCourier.etd?.trim() ? { courierEtd: selectedCourier.etd.trim() } : {}),
       });
       toast.dismiss(toastId);
       toast.success('Shipment created');

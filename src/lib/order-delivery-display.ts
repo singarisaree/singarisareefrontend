@@ -141,11 +141,73 @@ export function formatInternationalDeliveryHint(
   return null;
 }
 
+/** True once admin has booked Shiprocket (AWB / shipment id) or order is in fulfillment. */
+export function isOrderShipmentBooked(
+  order: Pick<Order, 'status' | 'shipping'>,
+): boolean {
+  if (order.shipping?.awbCode?.trim() || order.shipping?.shiprocketShipmentId?.trim()) {
+    return true;
+  }
+  return ['READY_TO_SHIP', 'SHIPPED', 'IN_TRANSIT'].includes(order.status);
+}
+
+function formatCheckoutStandardPromise(
+  shippingAddress?: Partial<ShippingAddress> | null,
+  deliveryType?: DeliveryType,
+): string {
+  const type = deliveryType ?? resolveDeliveryType(shippingAddress);
+  if (type === 'INTERNATIONAL') {
+    const intlHint = formatInternationalDeliveryHint(shippingAddress);
+    return intlHint
+      ? `International shipping · ${intlHint}`
+      : 'International shipping · timeline at checkout';
+  }
+  const hyderabad =
+    type === 'INDIA' &&
+    isHyderabadDeliveryArea({
+      city: shippingAddress?.city,
+      postalCode: shippingAddress?.postalCode,
+      landmark: shippingAddress?.landmark,
+      state: shippingAddress?.state,
+    });
+  return hyderabad
+    ? 'Standard delivery · arrives in 2 days'
+    : 'Standard delivery · expected in 3–7 days';
+}
+
+/** Live courier ETA after admin creates shipment (Shiprocket). */
+export function formatCarrierDeliveryStatusLine(
+  order: Pick<Order, 'estimatedDelivery' | 'shippingAddress' | 'shipping'>,
+  deliveryType: DeliveryType,
+): string {
+  const eta = order.estimatedDelivery ? new Date(order.estimatedDelivery) : null;
+  const hasEta = eta != null && Number.isFinite(eta.getTime());
+  const courier =
+    order.shipping?.courierName?.trim() || order.shippingAddress?.selectedCourier?.trim() || null;
+  const etaRange = order.shippingAddress?.selectedCourierEta?.trim()
+    ? formatDeliveryEstimate(order.shippingAddress.selectedCourierEta)
+    : null;
+  const prefix = deliveryType === 'INTERNATIONAL' ? 'International' : 'Standard';
+
+  if (hasEta) {
+    const byDate = formatDate(eta);
+    if (courier) return `${prefix} · ${courier} · expected by ${byDate}`;
+    return `${prefix} · expected by ${byDate}`;
+  }
+  if (etaRange) {
+    if (courier) return `${prefix} · ${courier} · ${etaRange}`;
+    return `${prefix} · ${etaRange}`;
+  }
+  if (courier) return `${prefix} · via ${courier}`;
+  return deliveryType === 'INTERNATIONAL'
+    ? 'International · preparing shipment'
+    : 'Standard · preparing shipment';
+}
+
 export function formatEstimatedDeliveryMessage(input: DeliverySummaryInput): string {
   const type = input.deliveryType ?? resolveDeliveryType(input.shippingAddress);
   const eta = input.estimatedDelivery ? new Date(input.estimatedDelivery) : null;
   const hasEta = eta != null && Number.isFinite(eta.getTime());
-  const intlHint = formatInternationalDeliveryHint(input.shippingAddress);
 
   if (type === 'QUICK') {
     if (hasEta) {
@@ -158,6 +220,7 @@ export function formatEstimatedDeliveryMessage(input: DeliverySummaryInput): str
   }
 
   if (type === 'INTERNATIONAL') {
+    const intlHint = formatInternationalDeliveryHint(input.shippingAddress);
     if (intlHint) {
       return `International shipping · ${intlHint}`;
     }
@@ -166,20 +229,40 @@ export function formatEstimatedDeliveryMessage(input: DeliverySummaryInput): str
       : 'International shipping · timeline updates once dispatched';
   }
 
-  if (
-    input.isHyderabadDelivery ??
-    (type === 'INDIA' &&
+  if (type === 'INDIA') {
+    const hyderabad =
+      input.isHyderabadDelivery ??
       isHyderabadDeliveryArea({
         city: input.shippingAddress?.city,
         postalCode: input.shippingAddress?.postalCode,
         landmark: input.shippingAddress?.landmark,
         state: input.shippingAddress?.state,
-      }))
-  ) {
-    return 'Standard delivery · arrives in 2 days';
+      });
+    return hyderabad
+      ? 'Standard delivery · arrives in 2 days'
+      : 'Standard delivery · expected in 3–7 days';
   }
 
-  return 'Standard delivery · expected in 3–7 days';
+  return formatCheckoutStandardPromise(input.shippingAddress, type);
+}
+
+function formatCheckoutStandardPromiseShort(
+  order: Pick<Order, 'shippingAddress'>,
+  deliveryType: DeliveryType,
+): string {
+  if (deliveryType === 'INTERNATIONAL') {
+    const intlHint = formatInternationalDeliveryHint(order.shippingAddress);
+    return intlHint ? `International · ${intlHint}` : 'International · preparing shipment';
+  }
+  const hyderabad =
+    deliveryType === 'INDIA' &&
+    isHyderabadDeliveryArea({
+      city: order.shippingAddress?.city,
+      postalCode: order.shippingAddress?.postalCode,
+      landmark: order.shippingAddress?.landmark,
+      state: order.shippingAddress?.state,
+    });
+  return hyderabad ? 'Standard · arrives in 2 days' : 'Standard · expected in 3–7 days';
 }
 
 export function getOrderListStatusLine(
@@ -205,6 +288,7 @@ export function getOrderListStatusLine(
 
   const inTransit = ['READY_TO_SHIP', 'SHIPPED', 'IN_TRANSIT'].includes(displayStatus);
   const early = displayStatus === 'PLACED' || displayStatus === 'CONFIRMED';
+  const shipmentBooked = isOrderShipmentBooked(order);
 
   if (deliveryType === 'QUICK') {
     if (inTransit || early) {
@@ -219,27 +303,17 @@ export function getOrderListStatusLine(
     }
   }
 
-  if (deliveryType === 'INTERNATIONAL') {
-    const intlHint = formatInternationalDeliveryHint(order.shippingAddress);
-    if (inTransit || early) {
-      if (intlHint) return `International · ${intlHint}`;
-      return hasEta
-        ? `International · expected by ${formatDate(eta)}`
-        : 'International · preparing shipment';
+  if (deliveryType === 'INTERNATIONAL' || deliveryType === 'INDIA') {
+    if (early && !shipmentBooked) {
+      return formatCheckoutStandardPromiseShort(order, deliveryType);
+    }
+    if (inTransit || shipmentBooked) {
+      return formatCarrierDeliveryStatusLine(order, deliveryType);
     }
   }
 
   if (inTransit || early) {
-    const hyderabad =
-      deliveryType === 'INDIA' &&
-      isHyderabadDeliveryArea({
-        city: order.shippingAddress?.city,
-        postalCode: order.shippingAddress?.postalCode,
-        landmark: order.shippingAddress?.landmark,
-        state: order.shippingAddress?.state,
-      });
-    if (hyderabad) return 'Standard · arrives in 2 days';
-    return 'Standard · expected in 3–7 days';
+    return formatCheckoutStandardPromiseShort(order, deliveryType);
   }
 
   return formatEstimatedDeliveryMessage({

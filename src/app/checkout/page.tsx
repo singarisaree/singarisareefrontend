@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { isAxiosError } from 'axios';
 import { useShallow } from 'zustand/react/shallow';
-import { Tag, MapPin, Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Zap, Truck, Check } from 'lucide-react';
+import { Tag, MapPin, Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Zap, Truck, Check, Loader2 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -271,6 +271,7 @@ export default function CheckoutPage() {
   const [intlShippingFee, setIntlShippingFee] = useState<number | null>(null);
   const [intlShippingCurrency, setIntlShippingCurrency] = useState('INR');
   const [intlCourierCompanyId, setIntlCourierCompanyId] = useState<number | null>(null);
+  const [intlChargeableWeightKg, setIntlChargeableWeightKg] = useState<number | null>(null);
   const [intlCourierOptions, setIntlCourierOptions] = useState<ShippingQuoteOption[]>([]);
   const intlCourierRef = useRef<string | null>(null);
   const [countries, setCountries] = useState<ShippingCountry[]>(FALLBACK_SHIPPING_COUNTRIES);
@@ -544,6 +545,7 @@ export default function CheckoutPage() {
     setIntlShippingFee(null);
     setIntlShippingCurrency('INR');
     setIntlCourierCompanyId(null);
+    setIntlChargeableWeightKg(null);
     setIntlCourierOptions([]);
     intlCourierRef.current = null;
   }, []);
@@ -629,6 +631,11 @@ export default function CheckoutPage() {
               : [];
 
         setIntlCourierOptions(options);
+        setIntlChargeableWeightKg(
+          quote.chargeableWeightKg != null && Number.isFinite(quote.chargeableWeightKg)
+            ? quote.chargeableWeightKg
+            : null,
+        );
 
         if (!options.length) {
           setShippingCharge(0);
@@ -1385,6 +1392,18 @@ export default function CheckoutPage() {
                         role="radiogroup"
                         aria-label="Delivery option"
                       >
+                        {quickQuoteStatus === 'loading' ? (
+                          <div
+                            className="flex items-center gap-2.5 rounded-lg border border-gold/20 bg-white px-3 py-2.5 sm:col-span-2"
+                            aria-live="polite"
+                          >
+                            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gold" aria-hidden />
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-charcoal">Instant delivery</p>
+                              <p className="text-[11px] text-brown-light">Calculating delivery time…</p>
+                            </div>
+                          </div>
+                        ) : null}
                         {quickQuoteStatus === 'ready' && quickQuote ? (
                           <button
                             type="button"
@@ -1415,11 +1434,11 @@ export default function CheckoutPage() {
                                     : formatPrice(quickQuote.rate)}
                                 </span>
                               </span>
-                              <span className="mt-0.5 flex items-baseline justify-between gap-2">
-                                <span className="truncate text-[10px] text-brown-light">
+                              <span className="mt-0.5 flex flex-col gap-0.5">
+                                <span className="text-[11px] font-medium text-maroon">
                                   {formatQuickEta(quickQuote.etaMinutes)}
                                 </span>
-                                <span className="shrink-0 text-[10px] text-brown-light">Delivery fee</span>
+                                <span className="text-[10px] text-brown-light">Delivery time</span>
                               </span>
                             </span>
                             <span
@@ -1468,9 +1487,16 @@ export default function CheckoutPage() {
                             </span>
                             <span className="mt-0.5 flex items-baseline justify-between gap-2">
                               <span className="truncate text-[10px] text-brown-light">
-                                Arrives in 2 days
+                                {isHyderabadDeliveryArea({
+                                  city: watchedCity,
+                                  postalCode: watchedPostalCode,
+                                  landmark: watchedLandmark,
+                                  state: watchedState,
+                                })
+                                  ? 'Arrives in 2 days'
+                                  : 'Expected in 3–7 days'}
                               </span>
-                              <span className="shrink-0 text-[10px] text-brown-light">Delivery fee</span>
+                              <span className="shrink-0 text-[10px] text-brown-light">Delivery time</span>
                             </span>
                           </span>
                           <span
@@ -1594,28 +1620,25 @@ export default function CheckoutPage() {
 
                     {!isIndia && intlCourierOptions.length > 0 ? (
                       <div className="col-span-full">
-                        <p className="text-sm font-medium text-charcoal">International courier</p>
+                        <p className="text-sm font-medium text-charcoal">International shipping</p>
                         <p className="mt-0.5 text-xs text-charcoal/70">
-                          Choose one of the lowest fares from Shiprocket (price &amp; delivery time).
+                          Fare is based on your country and total product weight
+                          {intlChargeableWeightKg != null
+                            ? ` (${intlChargeableWeightKg.toFixed(2)} kg chargeable).`
+                            : '.'}{' '}
+                          Live courier assignment happens when we dispatch your order.
                         </p>
-                        <ul className="mt-3 space-y-2" role="radiogroup" aria-label="International courier">
+                        <ul className="mt-3 space-y-2" role="radiogroup" aria-label="International shipping">
                           {intlCourierOptions.map((option) => {
                             const selected = intlCourier === option.courier;
                             const etaRaw = String(option.estimatedDays || '').trim();
                             const etaLabel = etaRaw ? formatDeliveryEstimate(etaRaw) : 'ETA on dispatch';
                             return (
                               <li key={option.courier}>
-                                <button
-                                  type="button"
+                                <div
                                   role="radio"
                                   aria-checked={selected}
-                                  disabled={shippingStatus === 'loading'}
-                                  onClick={() => applyIntlCourierOption(option)}
-                                  className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors ${
-                                    selected
-                                      ? 'border-gold bg-gold/10 ring-1 ring-gold/40'
-                                      : 'border-gold/20 bg-white hover:border-gold/40'
-                                  }`}
+                                  className="flex w-full items-center justify-between gap-3 rounded-lg border border-gold bg-gold/10 px-3 py-2.5 text-left text-sm ring-1 ring-gold/40"
                                 >
                                   <span className="min-w-0">
                                     <span className="block font-medium text-charcoal">{option.courier}</span>
@@ -1624,13 +1647,13 @@ export default function CheckoutPage() {
                                   <span className="shrink-0 font-medium text-charcoal">
                                     {formatMoney(option.shippingFee, option.currency)}
                                   </span>
-                                </button>
+                                </div>
                               </li>
                             );
                           })}
                         </ul>
                         {shippingStatus === 'loading' ? (
-                          <p className="mt-2 text-xs text-charcoal/70">Updating courier options…</p>
+                          <p className="mt-2 text-xs text-charcoal/70">Calculating shipping…</p>
                         ) : null}
                       </div>
                     ) : null}
@@ -1701,6 +1724,22 @@ export default function CheckoutPage() {
                       </p>
                     </div>
                   ) : null}
+                  {isIndia && preferredShipping === 'QUICK' && quickQuote && shippingStatus === 'ready' ? (
+                    <div
+                      className="mt-4 rounded-lg border border-maroon/25 bg-maroon/[0.06] px-3.5 py-3"
+                      aria-live="polite"
+                    >
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-charcoal/55">
+                        Instant delivery
+                      </p>
+                      <p className="mt-1.5 text-sm font-medium text-maroon">
+                        {formatQuickEta(quickQuote.etaMinutes)}
+                      </p>
+                      {quickQuote.courierName ? (
+                        <p className="mt-1 text-xs text-charcoal/75">via {quickQuote.courierName}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <dl className="mt-4 space-y-2 text-sm">
                     <div className="flex min-w-0 justify-between gap-3"><dt>Subtotal</dt><dd className="shrink-0">{formatPrice(subtotal)}</dd></div>
                     {couponDiscount > 0 && (
@@ -1716,12 +1755,22 @@ export default function CheckoutPage() {
                     )}
                     <div className="flex min-w-0 justify-between gap-3">
                       <dt className="min-w-0">
-                        {quickQuote ? 'Delivery fee' : !isIndia && intlCourier ? 'Intl. shipping' : 'Shipping'}
-                        {!isIndia && intlCourier && shippingStatus === 'ready' ? (
+                        {preferredShipping === 'QUICK' && quickQuote
+                          ? 'Instant delivery'
+                          : quickQuote
+                            ? 'Delivery fee'
+                            : !isIndia && intlCourier
+                              ? 'Intl. shipping'
+                              : 'Shipping'}
+                        {preferredShipping === 'QUICK' && quickQuote && shippingStatus === 'ready' ? (
+                          <span className="mt-0.5 block text-xs font-medium text-maroon">
+                            {formatQuickEta(quickQuote.etaMinutes)}
+                          </span>
+                        ) : !isIndia && intlCourier && shippingStatus === 'ready' ? (
                           <span className="mt-0.5 block truncate text-xs font-normal text-charcoal/60">
                             {intlCourier}
                           </span>
-                        ) : shippingStatus === 'ready' && shippingMessage && isIndia ? (
+                        ) : shippingStatus === 'ready' && shippingMessage && isIndia && preferredShipping !== 'QUICK' ? (
                           <span className="mt-0.5 block text-xs font-normal text-charcoal/60">
                             {shippingMessage}
                           </span>

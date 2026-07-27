@@ -1,4 +1,5 @@
 import type { Order, ReturnRequest, ReturnRequestStatus } from '@/types';
+import { resolveDeliveryType } from '@/lib/delivery-type';
 
 export const RETURN_WINDOW_DAYS = 3;
 
@@ -54,7 +55,12 @@ export function isWithinReturnWindow(order: Order, now = new Date()): boolean {
   return now <= deadline;
 }
 
+export function isInternationalOrder(order: Pick<Order, 'shippingAddress'>): boolean {
+  return resolveDeliveryType(order.shippingAddress) === 'INTERNATIONAL';
+}
+
 export function canRequestReturn(order: Order): boolean {
+  if (isInternationalOrder(order)) return false;
   if (isRefundComplete(order)) return false;
   if (!isWithinReturnWindow(order)) return false;
   const latest = getLatestReturn(order);
@@ -161,6 +167,7 @@ export function getCustomerFacingOrderStatus(order: Order): string {
 }
 
 export function shouldShowReturnBar(order: Order): boolean {
+  if (isInternationalOrder(order)) return false;
   if (isRefundComplete(order)) return false;
   if (order.status === 'REFUNDED') return false;
   if (order.status !== 'DELIVERED' && order.status !== 'RETURNED') return false;
@@ -168,6 +175,7 @@ export function shouldShowReturnBar(order: Order): boolean {
 }
 
 export function isReturnWindowClosed(order: Order, now = new Date()): boolean {
+  if (isInternationalOrder(order)) return false;
   if (order.status !== 'DELIVERED') return false;
   const deadline = getReturnDeadline(order);
   if (!deadline) return false;

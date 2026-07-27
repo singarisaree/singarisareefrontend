@@ -164,6 +164,7 @@ export const adminOrderService = {
       courierId?: number;
       pickupDate?: string;
       courierName?: string;
+      courierEtd?: string;
     },
   ) => apiPost(`/dashboard/shipping/${orderId}/shiprocket`, data),
   quoteBulkShiprocketOrders: (orderIds: string[]) =>
@@ -188,6 +189,7 @@ export const adminOrderService = {
       orderId: string;
       courierId: number;
       courierName?: string;
+      courierEtd?: string;
     }>,
   ) =>
     apiPost<{

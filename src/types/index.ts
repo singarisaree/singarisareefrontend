@@ -197,6 +197,8 @@ export interface ShippingQuoteResult {
   currency?: string;
   message?: string;
   options?: ShippingQuoteOption[];
+  /** International checkout — chargeable parcel weight (kg) */
+  chargeableWeightKg?: number;
 }
 
 export interface QuickQuoteResult {

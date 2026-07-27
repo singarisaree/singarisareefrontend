@@ -25,6 +25,7 @@ import {
   isReturnEligible,
   isReturnRejected,
   isReturnWindowClosed,
+  isInternationalOrder,
   shouldShowReturnBar,
 } from '@/lib/order-return';
 import {
@@ -38,7 +39,7 @@ import {
   formatCouponDiscountLabel,
 } from '@/lib/utils';
 import { useCustomerOrderRealtime } from '@/hooks/use-customer-order-realtime';
-import { getOrderListStatusLine, resolveDeliveryType, formatInternationalDeliveryHint } from '@/lib/order-delivery-display';
+import { getOrderListStatusLine, resolveDeliveryType, isOrderShipmentBooked, formatCarrierDeliveryStatusLine } from '@/lib/order-delivery-display';
 import type { Order, ReturnRequest } from '@/types';
 
 function OrderCardSkeleton() {
@@ -217,7 +218,7 @@ function MyOrdersPageContent() {
                 const returnWindowClosed = isReturnWindowClosed(order);
                 const statusLine = getOrderListStatusLine(order, displayStatus);
                 const deliveryType = resolveDeliveryType(order.shippingAddress);
-                const intlCourierHint = formatInternationalDeliveryHint(order.shippingAddress);
+                const shipmentBooked = isOrderShipmentBooked(order);
                 const payment = order.payments?.[0];
                 const isRefunded = displayStatus === 'REFUNDED';
                 const paymentStatus = isRefunded
@@ -310,9 +311,11 @@ function MyOrdersPageContent() {
                             <p className="mt-0.5 text-xs text-brown-light">
                               {formatDateTime(order.createdAt)}
                             </p>
-                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                              <DeliveryTypeBadge address={order.shippingAddress} size="md" />
-                            </div>
+                            {isExpanded ? (
+                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                <DeliveryTypeBadge address={order.shippingAddress} size="md" />
+                              </div>
+                            ) : null}
                           </div>
                           <span
                             className={cn(
@@ -459,19 +462,13 @@ function MyOrdersPageContent() {
 
                         {!shouldHideOrderTracking(order) && (
                           <div className="mt-5">
-                            {deliveryType === 'INTERNATIONAL' && intlCourierHint ? (
+                            {deliveryType === 'INTERNATIONAL' && shipmentBooked ? (
                               <p className="mb-2 text-xs text-brown-light">
-                                Courier:{' '}
-                                <span className="font-medium text-charcoal">
-                                  {order.shippingAddress.selectedCourier || intlCourierHint}
-                                </span>
-                                {order.shippingAddress.selectedCourier &&
-                                order.shippingAddress.selectedCourierEta ? (
-                                  <span>
-                                    {' '}
-                                    · {formatInternationalDeliveryHint(order.shippingAddress)}
-                                  </span>
-                                ) : null}
+                                {formatCarrierDeliveryStatusLine(order, 'INTERNATIONAL')}
+                              </p>
+                            ) : deliveryType === 'INDIA' && shipmentBooked ? (
+                              <p className="mb-2 text-xs text-brown-light">
+                                {formatCarrierDeliveryStatusLine(order, 'INDIA')}
                               </p>
                             ) : null}
                             <OrderTrackingTimeline order={order} />
@@ -554,7 +551,7 @@ function MyOrdersPageContent() {
                           </a>
                         )}
 
-                        {customerPhone && !showReturnBar && displayStatus === 'DELIVERED' && (
+                        {customerPhone && !showReturnBar && displayStatus === 'DELIVERED' && !isInternationalOrder(order) && (
                           <ReturnRequestSection
                             order={order}
                             phone={customerPhone}
