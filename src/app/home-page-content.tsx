@@ -35,31 +35,7 @@ async function loadHomepageData() {
   }
 }
 
-export function HomePageLoadingShell() {
-  return (
-    <>
-      <div
-        className="min-h-[32rem] bg-beige pattern-mandala sm:min-h-[38rem] lg:min-h-[42rem]"
-        aria-hidden
-      />
-      <div className="bg-cream py-16 sm:py-20" aria-hidden>
-        <div className="mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-10">
-          <div className="mx-auto h-8 w-56 rounded bg-beige/80" />
-          <div className="mt-10 flex gap-4 overflow-hidden">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-48 w-[42vw] max-w-[11.66rem] shrink-0 rounded-xl bg-beige/60 sm:w-48"
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-async function HomePageContent() {
+export async function HomePageContent() {
   const home = await loadHomepageData();
   const {
     banners,
@@ -205,5 +181,3 @@ async function HomePageContent() {
     </>
   );
 }
-
-export { HomePageContent };

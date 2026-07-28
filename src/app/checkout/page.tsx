@@ -1363,7 +1363,6 @@ export default function CheckoutPage() {
                                 <span className="text-[11px] font-medium text-maroon">
                                   {formatQuickEtaLabel(quickQuote.etaMinutes)}
                                 </span>
-                                <span className="text-[10px] text-brown-light">Exact delivery time</span>
                               </span>
                             </span>
                             <span

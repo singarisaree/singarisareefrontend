@@ -215,7 +215,7 @@ export function formatEstimatedDeliveryMessage(input: DeliverySummaryInput): str
       input.shippingAddress?.selectedCourierEta?.trim() ||
       input.selectedCourierEta?.trim() ||
       null;
-    return `Instant delivery · arrives by ${formatInstantArrivesByTime(etaHint, input.estimatedDelivery)}`;
+    return `Instant delivery · delivery by ${formatInstantArrivesByTime(etaHint, input.estimatedDelivery)}`;
   }
 
   if (type === 'INTERNATIONAL') {
@@ -290,7 +290,7 @@ export function getOrderListStatusLine(
   if (deliveryType === 'QUICK') {
     if (inTransit || early) {
       const etaHint = order.shippingAddress?.selectedCourierEta?.trim() || null;
-      return `Instant · arrives by ${formatInstantArrivesByTime(etaHint, order.estimatedDelivery)}`;
+      return `Instant · delivery by ${formatInstantArrivesByTime(etaHint, order.estimatedDelivery)}`;
     }
   }
 

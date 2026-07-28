@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { Suspense, useCallback } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { adminDashboardService } from '@/services/admin.service';
 import {
@@ -36,7 +36,7 @@ import {
 
 const DELIVERY_TYPE_FILTERS = ['ALL', 'INDIA', 'QUICK', 'INTERNATIONAL'] as const;
 
-export default function AdminDispatchesPage() {
+function AdminDispatchesPageContent() {
   const { search, debouncedSearch, onSearchChange } = useAdminSearchParam();
   const [courierParam, setCourierParam] = useAdminStringParam('courier');
   const activeCourier = courierParam || 'ALL';
@@ -306,5 +306,20 @@ export default function AdminDispatchesPage() {
         )}
       </AdminTableCard>
     </div>
+  );
+}
+
+export default function AdminDispatchesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <div className="h-8 w-48 animate-pulse rounded bg-[#e2e8f0]" />
+          <div className="h-64 animate-pulse rounded-xl bg-[#e2e8f0]/60" />
+        </div>
+      }
+    >
+      <AdminDispatchesPageContent />
+    </Suspense>
   );
 }

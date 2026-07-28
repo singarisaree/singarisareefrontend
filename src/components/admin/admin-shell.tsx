@@ -1,8 +1,8 @@
 'use client';
 
+import { Suspense, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
 import { NetworkGuard } from '@/components/network-guard';
 import { AdminRealtimeSync } from '@/components/admin/admin-realtime-sync';
@@ -32,7 +32,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     <>
       <AdminRealtimeSync />
       <NetworkGuard />
-      <AdminSidebar />
+      <Suspense fallback={null}>
+        <AdminSidebar />
+      </Suspense>
       <div className="lg:pl-[12.5rem]">
         <main className="p-6 lg:p-8">{children}</main>
       </div>

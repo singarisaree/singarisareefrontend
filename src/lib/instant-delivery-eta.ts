@@ -2,6 +2,12 @@ import { formatTime } from '@/lib/utils';
 
 const DEFAULT_INSTANT_MS = 60 * 60 * 1000;
 
+/** Round up to the next N-minute mark so the clock time stays clean (e.g. 1:00 pm). */
+function roundUpToMinuteStep(date: Date, stepMinutes = 5): Date {
+  const stepMs = stepMinutes * 60_000;
+  return new Date(Math.ceil(date.getTime() / stepMs) * stepMs);
+}
+
 /** True when a string looks like a clock time ("4:52 PM", "16:30"). */
 function parseClockTimeToDate(raw: string): Date | null {
   const ampm = raw.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
@@ -33,13 +39,22 @@ function parseClockTimeToDate(raw: string): Date | null {
   return null;
 }
 
-/** Parse Instant ETA labels ("45 min", "About 1 hour", "90", "same day", "45-60 mins") into milliseconds. */
+/** Minutes from a distance label like "~5.2 km" (same formula as backend). */
+function minutesFromDistanceLabel(raw: string): number | null {
+  const kmMatch = raw.match(/(\d+(?:\.\d+)?)\s*km/i);
+  if (!kmMatch) return null;
+  const km = Number(kmMatch[1]);
+  if (!Number.isFinite(km) || km <= 0) return null;
+  return Math.min(180, Math.max(30, Math.round(20 + km * 4)));
+}
+
+/** Parse Instant ETA labels ("45 min", "About 1 hour", "90", "~5 km") into milliseconds. */
 export function parseQuickEtaDurationMs(eta: string | null | undefined): number | null {
   if (eta == null || !String(eta).trim()) return null;
   const raw = String(eta).trim();
 
-  // Distance-only labels are not durations
-  if (/\bkm\b/i.test(raw) && !/\bmin/i.test(raw) && !/\bhour/i.test(raw)) return null;
+  const fromKm = minutesFromDistanceLabel(raw);
+  if (fromKm != null) return fromKm * 60_000;
 
   if (/same.?day|today/i.test(raw)) return DEFAULT_INSTANT_MS;
 
@@ -48,7 +63,6 @@ export function parseQuickEtaDurationMs(eta: string | null | undefined): number 
     return Number.isFinite(mins) && mins > 0 ? mins * 60_000 : null;
   }
 
-  // Ranges like "45-60 min" → use the upper bound for a reliable arrives-by time
   const rangeMins = raw.match(/(\d+)\s*[-–]\s*(\d+)\s*min/i);
   if (rangeMins) {
     const high = Number(rangeMins[2]);
@@ -93,20 +107,20 @@ export function formatInstantArrivesByTime(
 
   if (raw) {
     const clock = parseClockTimeToDate(raw);
-    if (clock) return formatTime(clock);
+    if (clock) return formatTime(roundUpToMinuteStep(clock));
 
     const asDate = new Date(raw);
     if (
       Number.isFinite(asDate.getTime()) &&
       (/^\d{4}-\d{2}-\d{2}/.test(raw) || raw.includes('T') || /gmt|utc|\+\d{2}/i.test(raw))
     ) {
-      return formatTime(asDate);
+      return formatTime(roundUpToMinuteStep(asDate));
     }
   }
 
   const durationMs = parseQuickEtaDurationMs(etaMinutes ?? undefined);
   if (durationMs != null) {
-    return formatTime(new Date(Date.now() + durationMs));
+    return formatTime(roundUpToMinuteStep(new Date(Date.now() + durationMs)));
   }
 
   if (estimatedDelivery != null) {
@@ -116,32 +130,17 @@ export function formatInstantArrivesByTime(
       const looksLikeDateOnly =
         eta.getHours() === 0 && eta.getMinutes() === 0 && eta.getSeconds() === 0;
       const arriveAt = looksLikeDateOnly ? new Date(Date.now() + DEFAULT_INSTANT_MS) : eta;
-      return formatTime(arriveAt);
+      return formatTime(roundUpToMinuteStep(arriveAt));
     }
   }
 
-  return formatTime(new Date(Date.now() + DEFAULT_INSTANT_MS));
+  return formatTime(roundUpToMinuteStep(new Date(Date.now() + DEFAULT_INSTANT_MS)));
 }
 
-/** Human duration hint alongside the clock time, e.g. "~45 min". */
-export function formatQuickEtaDurationHint(etaMinutes?: string | null): string | null {
-  const durationMs = parseQuickEtaDurationMs(etaMinutes ?? undefined);
-  if (durationMs == null) return null;
-  const mins = Math.max(1, Math.round(durationMs / 60_000));
-  if (mins < 60) return `~${mins} min`;
-  const hours = mins / 60;
-  if (Number.isInteger(hours)) return hours === 1 ? '~1 hour' : `~${hours} hours`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `~${h}h ${m}m`;
-}
-
-/** Checkout / cards: “Arrives by 4:52 PM”. */
+/** Checkout: “Delivery by 1:00 pm” — clock only, no duration text. */
 export function formatQuickEtaLabel(
   etaMinutes?: string | null,
   estimatedDelivery?: string | null,
 ): string {
-  const time = formatInstantArrivesByTime(etaMinutes, estimatedDelivery);
-  const hint = formatQuickEtaDurationHint(etaMinutes);
-  return hint ? `Arrives by ${time} (${hint})` : `Arrives by ${time}`;
+  return `Delivery by ${formatInstantArrivesByTime(etaMinutes, estimatedDelivery)}`;
 }
