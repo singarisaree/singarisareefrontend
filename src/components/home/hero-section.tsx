@@ -85,6 +85,8 @@ export function HeroSection({ banners }: HeroSectionProps) {
         const mobileImage = resolveHeroImageUrl(slide.mobileImageUrl || slide.imageUrl);
         const visible = index === activeIndex;
         const isFirst = index === 0;
+        // CSS background paints from the same URL as soon as preload finishes —
+        // avoids a blank beige flash while next/image decodes.
         return (
           <div
             key={slide.id}
@@ -94,7 +96,10 @@ export function HeroSection({ banners }: HeroSectionProps) {
             aria-hidden={!visible}
           >
             {mobileImage ? (
-              <div className="absolute inset-0 sm:hidden">
+              <div
+                className="absolute inset-0 bg-beige bg-cover bg-top sm:hidden"
+                style={isFirst || visible ? { backgroundImage: `url(${mobileImage})` } : undefined}
+              >
                 <Image
                   src={mobileImage}
                   alt={slide.title || 'Singari Sarees'}
@@ -114,7 +119,10 @@ export function HeroSection({ banners }: HeroSectionProps) {
               </div>
             ) : null}
             {desktopImage ? (
-              <div className="absolute inset-0 hidden sm:block">
+              <div
+                className="absolute inset-0 hidden bg-beige bg-cover bg-right-top sm:block"
+                style={isFirst || visible ? { backgroundImage: `url(${desktopImage})` } : undefined}
+              >
                 <Image
                   src={desktopImage}
                   alt={slide.title || 'Singari Sarees'}

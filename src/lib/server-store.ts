@@ -165,13 +165,13 @@ export const serverStore = {
       'storefront-settings',
     ]),
   getBanners: () =>
-    cached('hero-banners', 5, () => rawGet<HeroBanner[]>('/hero-banners'), [] as HeroBanner[], [
+    cached('hero-banners', 60, () => rawGet<HeroBanner[]>('/hero-banners'), [] as HeroBanner[], [
       'storefront-banners',
     ]),
   getHomepage: () =>
     cached(
       'storefront-homepage',
-      5,
+      60,
       () =>
         rawGet<{
           banners: HeroBanner[];

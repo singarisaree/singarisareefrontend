@@ -21,7 +21,6 @@ import {
   Truck,
   RotateCcw,
   IndianRupee,
-  ShieldAlert,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -41,7 +40,6 @@ const navItems = [
   { href: '/admin/coupons', label: 'Coupons', icon: Ticket, prefetchKey: 'admin-coupons' as const },
   { href: '/admin/users', label: 'Users', icon: UserCircle, prefetchKey: 'admin-users' as const },
   { href: '/admin/reviews', label: 'Reviews', icon: Star, prefetchKey: 'admin-reviews' as const },
-  { href: '/admin/escalation', label: 'Escalation', icon: ShieldAlert, prefetchKey: 'admin-orders' as const },
   { href: '/admin/showcase', label: 'Singari Showcase', icon: Clapperboard, prefetchKey: 'admin-categories' as const },
   { href: '/admin/settings', label: 'Settings', icon: Settings, prefetchKey: 'admin-banners' as const },
 ];

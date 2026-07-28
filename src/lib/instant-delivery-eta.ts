@@ -2,10 +2,44 @@ import { formatTime } from '@/lib/utils';
 
 const DEFAULT_INSTANT_MS = 60 * 60 * 1000;
 
-/** Parse Instant ETA labels ("45 min", "About 1 hour", "90", "same day") into milliseconds. */
+/** True when a string looks like a clock time ("4:52 PM", "16:30"). */
+function parseClockTimeToDate(raw: string): Date | null {
+  const ampm = raw.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+  if (ampm) {
+    let hours = Number(ampm[1]);
+    const minutes = Number(ampm[2]);
+    const period = ampm[3].toLowerCase();
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes) || minutes > 59 || hours < 1 || hours > 12) {
+      return null;
+    }
+    if (period === 'pm' && hours < 12) hours += 12;
+    if (period === 'am' && hours === 12) hours = 0;
+    const d = new Date();
+    d.setHours(hours, minutes, 0, 0);
+    if (d.getTime() < Date.now() - 5 * 60_000) d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  const twentyFour = raw.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+  if (twentyFour) {
+    const hours = Number(twentyFour[1]);
+    const minutes = Number(twentyFour[2]);
+    const d = new Date();
+    d.setHours(hours, minutes, 0, 0);
+    if (d.getTime() < Date.now() - 5 * 60_000) d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  return null;
+}
+
+/** Parse Instant ETA labels ("45 min", "About 1 hour", "90", "same day", "45-60 mins") into milliseconds. */
 export function parseQuickEtaDurationMs(eta: string | null | undefined): number | null {
   if (eta == null || !String(eta).trim()) return null;
   const raw = String(eta).trim();
+
+  // Distance-only labels are not durations
+  if (/\bkm\b/i.test(raw) && !/\bmin/i.test(raw) && !/\bhour/i.test(raw)) return null;
 
   if (/same.?day|today/i.test(raw)) return DEFAULT_INSTANT_MS;
 
@@ -14,22 +48,38 @@ export function parseQuickEtaDurationMs(eta: string | null | undefined): number 
     return Number.isFinite(mins) && mins > 0 ? mins * 60_000 : null;
   }
 
+  // Ranges like "45-60 min" → use the upper bound for a reliable arrives-by time
+  const rangeMins = raw.match(/(\d+)\s*[-–]\s*(\d+)\s*min/i);
+  if (rangeMins) {
+    const high = Number(rangeMins[2]);
+    return Number.isFinite(high) && high > 0 ? high * 60_000 : null;
+  }
+
   const aboutHours = raw.match(/about\s+(\d+(?:\.\d+)?)\s+hours?/i);
   if (aboutHours) {
     const hours = Number(aboutHours[1]);
     return Number.isFinite(hours) && hours > 0 ? hours * 3_600_000 : null;
   }
 
-  const aboutMins = raw.match(/(?:about\s+)?(\d+)\s+min(?:utes?)?/i);
+  const aboutMins = raw.match(/(?:about\s+|~)?(\d+)\s*min(?:utes?)?/i);
   if (aboutMins) {
     const mins = Number(aboutMins[1]);
     return Number.isFinite(mins) && mins > 0 ? mins * 60_000 : null;
   }
 
-  const plainHours = raw.match(/^(\d+(?:\.\d+)?)\s*h(?:ours?)?$/i);
+  const plainHours = raw.match(/^~?\s*(\d+(?:\.\d+)?)\s*h(?:ours?)?$/i);
   if (plainHours) {
     const hours = Number(plainHours[1]);
     return Number.isFinite(hours) && hours > 0 ? hours * 3_600_000 : null;
+  }
+
+  const hoursAndMins = raw.match(/(\d+)\s*h(?:ours?)?\s*(?:and\s*)?(\d+)\s*m/i);
+  if (hoursAndMins) {
+    const hours = Number(hoursAndMins[1]);
+    const mins = Number(hoursAndMins[2]);
+    if (Number.isFinite(hours) && Number.isFinite(mins) && (hours > 0 || mins > 0)) {
+      return hours * 3_600_000 + mins * 60_000;
+    }
   }
 
   return null;
@@ -39,6 +89,21 @@ export function formatInstantArrivesByTime(
   etaMinutes?: string | null,
   estimatedDelivery?: string | Date | null,
 ): string {
+  const raw = etaMinutes != null ? String(etaMinutes).trim() : '';
+
+  if (raw) {
+    const clock = parseClockTimeToDate(raw);
+    if (clock) return formatTime(clock);
+
+    const asDate = new Date(raw);
+    if (
+      Number.isFinite(asDate.getTime()) &&
+      (/^\d{4}-\d{2}-\d{2}/.test(raw) || raw.includes('T') || /gmt|utc|\+\d{2}/i.test(raw))
+    ) {
+      return formatTime(asDate);
+    }
+  }
+
   const durationMs = parseQuickEtaDurationMs(etaMinutes ?? undefined);
   if (durationMs != null) {
     return formatTime(new Date(Date.now() + durationMs));
@@ -58,10 +123,25 @@ export function formatInstantArrivesByTime(
   return formatTime(new Date(Date.now() + DEFAULT_INSTANT_MS));
 }
 
+/** Human duration hint alongside the clock time, e.g. "~45 min". */
+export function formatQuickEtaDurationHint(etaMinutes?: string | null): string | null {
+  const durationMs = parseQuickEtaDurationMs(etaMinutes ?? undefined);
+  if (durationMs == null) return null;
+  const mins = Math.max(1, Math.round(durationMs / 60_000));
+  if (mins < 60) return `~${mins} min`;
+  const hours = mins / 60;
+  if (Number.isInteger(hours)) return hours === 1 ? '~1 hour' : `~${hours} hours`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `~${h}h ${m}m`;
+}
+
 /** Checkout / cards: “Arrives by 4:52 PM”. */
 export function formatQuickEtaLabel(
   etaMinutes?: string | null,
   estimatedDelivery?: string | null,
 ): string {
-  return `Arrives by ${formatInstantArrivesByTime(etaMinutes, estimatedDelivery)}`;
+  const time = formatInstantArrivesByTime(etaMinutes, estimatedDelivery);
+  const hint = formatQuickEtaDurationHint(etaMinutes);
+  return hint ? `Arrives by ${time} (${hint})` : `Arrives by ${time}`;
 }

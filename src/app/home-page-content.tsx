@@ -60,12 +60,15 @@ export function HomePageLoadingShell() {
 }
 
 async function HomePageContent() {
-  const [banners, home] = await Promise.all([
-    serverStore.getBanners().catch(() => [] as HeroBanner[]),
-    loadHomepageData(),
-  ]);
-
-  const { categories, products, settings, instagramReels = [], showcaseItems = [] } = home;
+  const home = await loadHomepageData();
+  const {
+    banners,
+    categories,
+    products,
+    settings,
+    instagramReels = [],
+    showcaseItems = [],
+  } = home;
   const reelItems = instagramReels.map((reel) => ({
     id: reel.id,
     videoUrl: reel.videoUrl,

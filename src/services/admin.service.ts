@@ -120,30 +120,6 @@ export const adminOrderService = {
     apiPost<Order[]>("/orders/bulk-fetch", { orderIds }),
   update: (id: string, data: Record<string, unknown>) =>
     apiPatch<Order>(`/orders/${id}`, data),
-  searchEscalation: (q: string) =>
-    apiGet<
-      Array<{
-        id: string;
-        orderNumber: string;
-        status: string;
-        customerName: string;
-        customerPhone: string;
-        customerEmail: string;
-        grandTotal: number;
-        refundedAt: string | null;
-        refundCouponCode: string | null;
-        createdAt: string;
-        updatedAt: string;
-        payments: Array<{
-          status: string;
-          method: string | null;
-          amount: number;
-        }>;
-        trackingHistory: Array<{ status: string; timestamp: string }>;
-      }>
-    >("/orders/escalation/search", { q }),
-  applyEscalation: (id: string, data: Record<string, unknown>) =>
-    apiPatch<Order>(`/orders/${id}/escalation`, data),
   createAdminOrder: (data: Record<string, unknown>) =>
     apiPost("/orders/admin", data),
   createManualShipping: (orderId: string, data: Record<string, string>) =>
