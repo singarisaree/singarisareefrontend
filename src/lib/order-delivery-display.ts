@@ -6,7 +6,7 @@ import {
   getDeliveryTypeLabel,
   type DeliveryType,
 } from '@/lib/delivery-type';
-import { formatDate } from '@/lib/utils';
+import { formatDate, getOrderStatusLabel } from '@/lib/utils';
 import { formatInstantArrivesByTime } from '@/lib/instant-delivery-eta';
 
 export { resolveDeliveryType, getDeliveryTypeLabel, type DeliveryType };
@@ -94,9 +94,14 @@ export function mapOrderStatusToTrackingStepIndex(
   orderStatus: string,
   profile: DeliveryTrackingProfile,
 ): number {
-  const postDelivery = new Set(['RETURNED', 'REFUNDED', 'CANCELLED']);
-  if (postDelivery.has(orderStatus)) {
+  // Return / refund continue after delivery — highlight Delivered, then return steps.
+  if (orderStatus === 'RETURNED' || orderStatus === 'REFUNDED') {
     return profile.steps.length - 1;
+  }
+
+  // Terminal / exception statuses must NOT jump to Delivered or reset to Placed.
+  if (orderStatus === 'CANCELLED' || orderStatus === 'FAILED' || orderStatus === 'RTO') {
+    return -1;
   }
 
   for (let index = 0; index < profile.steps.length; index += 1) {
@@ -106,6 +111,64 @@ export function mapOrderStatusToTrackingStepIndex(
   }
 
   return 0;
+}
+
+type TrackingHistoryEntry = {
+  status: string;
+  timestamp: string;
+  description?: string | null;
+};
+
+/**
+ * After RTO / cancel / reship, older SHIPPED / IN_TRANSIT / DELIVERED rows still exist.
+ * Timeline should only use the current fulfillment attempt.
+ */
+export function scopeTrackingHistoryToCurrentAttempt<T extends TrackingHistoryEntry>(
+  history: T[],
+): T[] {
+  if (history.length === 0) return history;
+
+  const chronological = [...history].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+  );
+
+  let startIndex = 0;
+  for (let i = 0; i < chronological.length; i += 1) {
+    const status = chronological[i].status;
+    if (status !== 'RTO' && status !== 'CANCELLED') continue;
+
+    for (let j = i + 1; j < chronological.length; j += 1) {
+      if (['PLACED', 'CONFIRMED', 'READY_TO_SHIP'].includes(chronological[j].status)) {
+        startIndex = j;
+        break;
+      }
+    }
+  }
+
+  const scoped = chronological.slice(startIndex);
+  if (startIndex === 0) return scoped;
+
+  // Keep original placed/confirmed so the timeline doesn't lose early steps after reship.
+  const prefix: T[] = [];
+  const firstPlaced = chronological.find(
+    (entry) => entry.status === 'PLACED' || entry.status === 'PAYMENT_PENDING',
+  );
+  if (
+    firstPlaced &&
+    !scoped.some((entry) => entry.status === 'PLACED' || entry.status === 'PAYMENT_PENDING')
+  ) {
+    prefix.push(firstPlaced);
+  }
+  const firstConfirmed = chronological.find((entry) => entry.status === 'CONFIRMED');
+  if (
+    firstConfirmed &&
+    !scoped.some((entry) => entry.status === 'CONFIRMED') &&
+    !prefix.some((entry) => entry.status === 'CONFIRMED')
+  ) {
+    prefix.push(firstConfirmed);
+  }
+
+  return [...prefix, ...scoped];
 }
 
 export function getTrackingStepLabel(step: string, profile: DeliveryTrackingProfile): string {
@@ -275,6 +338,9 @@ export function getOrderListStatusLine(
 
   if (displayStatus === 'DELIVERED' && deliveredTimestamp) {
     return `Delivered on ${formatDate(deliveredTimestamp)}`;
+  }
+  if (displayStatus.startsWith('RETURN_')) {
+    return getOrderStatusLabel(displayStatus);
   }
   if (displayStatus === 'PAYMENT_PENDING') {
     return 'Complete payment to confirm your order';

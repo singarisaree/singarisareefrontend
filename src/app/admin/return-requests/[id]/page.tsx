@@ -280,9 +280,43 @@ export default function AdminReturnRequestDetailPage({
                     </button>
                   ))}
                 </div>
+                {request.status === 'REQUESTED' ? (
+                  <p className="text-xs text-[#64748b]">
+                    Accepting will automatically create a Shiprocket reverse pickup and move this
+                    return to Out for pickup.
+                  </p>
+                ) : null}
               </div>
             </AdminDetailSection>
           )}
+
+          {request.reverseAwbCode || request.reverseTrackingUrl ? (
+            <AdminDetailSection
+              title="Reverse pickup"
+              description="Shiprocket return shipment created when return was accepted"
+            >
+              <div className="space-y-2 text-sm">
+                {request.reverseAwbCode ? (
+                  <p className="text-[#334155]">
+                    AWB:{' '}
+                    <span className="font-mono font-semibold text-[#0f172a]">
+                      {request.reverseAwbCode}
+                    </span>
+                  </p>
+                ) : null}
+                {request.reverseTrackingUrl ? (
+                  <a
+                    href={request.reverseTrackingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex font-medium text-[#0f172a] underline"
+                  >
+                    Track reverse pickup on Shiprocket
+                  </a>
+                ) : null}
+              </div>
+            </AdminDetailSection>
+          ) : null}
         </AdminDetailAside>
       </AdminDetailGrid>
     </AdminDetailShell>

@@ -163,6 +163,16 @@ export function getCustomerFacingOrderStatus(order: Order): string {
     return 'REFUNDED';
   }
 
+  // Prefer return progress over stale "Delivered" while a return is active.
+  if (status === 'DELIVERED' && hasActiveReturnRequest(order)) {
+    const latest = getLatestReturn(order);
+    if (latest?.status === 'REQUESTED') return 'RETURN_REQUESTED';
+    if (latest?.status === 'ACCEPTED') return 'RETURN_ACCEPTED';
+    if (latest?.status === 'OUT_FOR_PICKUP') return 'RETURN_OUT_FOR_PICKUP';
+    if (latest?.status === 'PICKUP_CANCELLED') return 'RETURN_PICKUP_CANCELLED';
+    if (latest?.status === 'PICKED_UP') return 'RETURN_PICKED_UP';
+  }
+
   return status;
 }
 

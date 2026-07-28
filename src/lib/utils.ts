@@ -137,6 +137,11 @@ export function getOrderStatusColor(status: string): string {
     CANCELLED: 'bg-red-100 text-red-800',
     FAILED: 'bg-red-100 text-red-800',
     RTO: 'bg-gray-100 text-gray-800',
+    RETURN_REQUESTED: 'bg-amber-100 text-amber-900',
+    RETURN_ACCEPTED: 'bg-amber-100 text-amber-900',
+    RETURN_OUT_FOR_PICKUP: 'bg-orange-100 text-orange-900',
+    RETURN_PICKUP_CANCELLED: 'bg-orange-100 text-orange-800',
+    RETURN_PICKED_UP: 'bg-violet-100 text-violet-800',
   };
   return colors[status] || 'bg-gray-100 text-gray-800';
 }
@@ -155,6 +160,11 @@ export function getOrderStatusLabel(status: string): string {
     CANCELLED: 'Cancelled',
     FAILED: 'Failed',
     RTO: 'RTO',
+    RETURN_REQUESTED: 'Return Requested',
+    RETURN_ACCEPTED: 'Return Accepted',
+    RETURN_OUT_FOR_PICKUP: 'Return Pickup',
+    RETURN_PICKUP_CANCELLED: 'Pickup Cancelled',
+    RETURN_PICKED_UP: 'Return Picked Up',
   };
   return labels[status] || status;
 }

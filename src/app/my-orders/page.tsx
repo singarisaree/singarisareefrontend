@@ -351,7 +351,8 @@ function MyOrdersPageContent() {
                     </button>
 
                     {order.shipping?.dropOtp &&
-                      resolveDeliveryType(order.shippingAddress) === 'QUICK' && (
+                      resolveDeliveryType(order.shippingAddress) === 'QUICK' &&
+                      !['DELIVERED', 'RETURNED', 'REFUNDED'].includes(displayStatus) && (
                         <div className="border-t border-maroon/15 bg-maroon/[0.04] px-4 py-3 sm:px-5">
                           <div className="flex items-center justify-between gap-3">
                             <div className="min-w-0">

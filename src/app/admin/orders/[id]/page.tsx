@@ -57,9 +57,27 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
   REFUNDED: [],
 };
 
-function allowedStatusOptions(currentStatus: string, draftStatus: string): string[] {
+/** After AWB, Shiprocket owns Shipped / In transit / Delivered. */
+const SHIPROCKET_OWNED_STATUSES = new Set(['SHIPPED', 'IN_TRANSIT', 'DELIVERED']);
+
+function hasShiprocketAwb(order: Pick<Order, 'shipping'> | null | undefined): boolean {
+  return Boolean(
+    order?.shipping?.method === 'SHIPROCKET' &&
+      order.shipping.shiprocketShipmentId &&
+      order.shipping.awbCode,
+  );
+}
+
+function allowedStatusOptions(
+  currentStatus: string,
+  draftStatus: string,
+  shiprocketOwned = false,
+): string[] {
   const next = ALLOWED_STATUS_TRANSITIONS[currentStatus] ?? [];
-  const options = new Set<string>([currentStatus, ...next]);
+  const filteredNext = shiprocketOwned
+    ? next.filter((status) => !SHIPROCKET_OWNED_STATUSES.has(status))
+    : next;
+  const options = new Set<string>([currentStatus, ...filteredNext]);
   // Keep draft selection visible even if invalid (backend will reject on save)
   if (draftStatus) options.add(draftStatus);
   if (currentStatus === 'READY_TO_SHIP') options.add('READY_TO_SHIP');
@@ -591,7 +609,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
           <AdminDetailSection title="Manage Order">
             <div className="space-y-3">
               <AdminFormSelect label="Order Status" value={status} onChange={setStatus}>
-                {allowedStatusOptions(order.status, status).map((option) => (
+                {allowedStatusOptions(order.status, status, hasShiprocketAwb(order)).map((option) => (
                   <option key={option} value={option}>
                     {option === 'READY_TO_SHIP'
                       ? `${getOrderStatusLabel(option)} (Shiprocket only)`
@@ -599,6 +617,12 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                   </option>
                 ))}
               </AdminFormSelect>
+              {hasShiprocketAwb(order) && (
+                <p className="text-xs text-[#64748b]">
+                  Shiprocket owns Shipped / In transit / Delivered after AWB. Status syncs from tracking
+                  automatically.
+                </p>
+              )}
               {status === 'READY_TO_SHIP' && !order.shipping?.awbCode && (
                 <p className="text-xs text-[#b91c1c]">
                   Ready to Ship without AWB. Create shipment from Confirmed, or wait for Shiprocket sync.
@@ -609,7 +633,7 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                   If cancelled in Shiprocket, the order returns to Confirmed automatically.
                 </p>
               )}
-              {status !== 'READY_TO_SHIP' && (
+              {status !== 'READY_TO_SHIP' && !hasShiprocketAwb(order) && (
                 <p className="text-xs text-[#64748b]">
                   Ready to Ship is set only when creating a Shiprocket shipment.
                 </p>
@@ -632,6 +656,16 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
                       </StatusBadge>
                       <p className="mt-1.5 truncate text-sm text-[#334155]">{returnRequest.reason}</p>
                       <p className="mt-0.5 text-xs text-[#94a3b8]">{formatDate(returnRequest.createdAt)}</p>
+                      {returnRequest.reverseTrackingUrl ? (
+                        <a
+                          href={returnRequest.reverseTrackingUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-1 inline-block text-xs font-medium text-[#0f172a] underline"
+                        >
+                          Reverse pickup tracking
+                        </a>
+                      ) : null}
                     </div>
                     <Link
                       href={`/admin/return-requests/${returnRequest.id}`}

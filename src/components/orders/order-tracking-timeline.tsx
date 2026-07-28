@@ -19,6 +19,7 @@ import {
   getDeliveryTrackingProfile,
   getTrackingStepLabel,
   mapOrderStatusToTrackingStepIndex,
+  scopeTrackingHistoryToCurrentAttempt,
 } from '@/lib/order-delivery-display';
 import { cn, formatDate, formatPrice, formatTime } from '@/lib/utils';
 import type { Order, ReturnRequest, ReturnRequestTrackingEntry } from '@/types';
@@ -152,38 +153,63 @@ function getStepLabelClass(isCurrent: boolean, isDone: boolean, isAdmin: boolean
 
 function getCurrentStepIndex(
   order: TrackingOrder,
-  history: Order['trackingHistory'],
+  scopedHistoryNewestFirst: NonNullable<Order['trackingHistory']>,
   profile: ReturnType<typeof getDeliveryTrackingProfile>,
 ): number {
-  const postDeliveryStatuses = new Set(['RETURNED', 'REFUNDED', 'CANCELLED']);
-  if (postDeliveryStatuses.has(order.status)) {
+  if (order.status === 'RETURNED' || order.status === 'REFUNDED') {
     return profile.steps.length - 1;
   }
 
+  // Cancelled / failed / RTO: stay on last reached fulfillment step (not Delivered).
+  if (order.status === 'CANCELLED' || order.status === 'FAILED' || order.status === 'RTO') {
+    for (const entry of scopedHistoryNewestFirst) {
+      const idx = mapOrderStatusToTrackingStepIndex(entry.status, profile);
+      if (idx >= 0) return idx;
+    }
+    return 0;
+  }
+
   const fromOrder = mapOrderStatusToTrackingStepIndex(order.status, profile);
-  const latestTrackingStatus = history?.[0]?.status;
+  if (fromOrder < 0) return 0;
+
+  const latestTrackingStatus = scopedHistoryNewestFirst[0]?.status;
   const fromTracking = latestTrackingStatus
     ? mapOrderStatusToTrackingStepIndex(latestTrackingStatus, profile)
     : fromOrder;
 
+  if (fromTracking < 0) return fromOrder;
   return Math.max(fromOrder, fromTracking);
 }
 
 function buildStepStatusUpdates(
   profile: ReturnType<typeof getDeliveryTrackingProfile>,
-  sortedHistory: NonNullable<Order['trackingHistory']>,
+  scopedChronological: NonNullable<Order['trackingHistory']>,
   continueFromDelivered: boolean,
   order: TrackingOrder,
 ) {
+  // Newest-first so each step picks the latest timestamp in the current attempt.
+  const newestFirst = [...scopedChronological].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
   const map = new Map<string, { timestamp: string; description?: string }>();
   for (const step of profile.steps) {
     const group = profile.statusGroups[step] || [step];
-    for (const entry of sortedHistory) {
+    for (const entry of newestFirst) {
       if (group.includes(entry.status) && !map.has(step)) {
-        map.set(step, { timestamp: entry.timestamp, description: entry.description });
+        map.set(step, { timestamp: entry.timestamp, description: entry.description ?? undefined });
       }
     }
   }
+
+  // Don't mark future steps complete from a previous attempt after cancel/RTO.
+  if (order.status === 'CANCELLED' || order.status === 'FAILED' || order.status === 'RTO') {
+    const currentIdx = getCurrentStepIndex(order, newestFirst, profile);
+    for (const step of profile.steps) {
+      const stepIdx = profile.steps.indexOf(step);
+      if (stepIdx > currentIdx) map.delete(step);
+    }
+  }
+
   if (continueFromDelivered && !map.has('DELIVERED')) {
     const deliveredAt = getOrderDeliveredAt(order as Order);
     if (deliveredAt) {
@@ -212,6 +238,10 @@ export function OrderTrackingTimeline({
   const hideTracking = shouldHideOrderTracking(order);
 
   const history = useMemo(() => order.trackingHistory ?? [], [order.trackingHistory]);
+  const scopedHistory = useMemo(
+    () => scopeTrackingHistoryToCurrentAttempt(history),
+    [history],
+  );
   const returnTimeline = useMemo(
     () => getEffectiveReturnTimeline(order as Order, returnRequest),
     [order, returnRequest],
@@ -231,8 +261,11 @@ export function OrderTrackingTimeline({
   );
 
   const sortedHistory = useMemo(
-    () => [...history].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-    [history],
+    () =>
+      [...scopedHistory].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      ),
+    [scopedHistory],
   );
 
   const returnHistoryChronological = useMemo(
@@ -243,7 +276,7 @@ export function OrderTrackingTimeline({
     [returnHistory],
   );
 
-  const currentStep = getCurrentStepIndex(order, history, trackingProfile);
+  const currentStep = getCurrentStepIndex(order, sortedHistory, trackingProfile);
   const orderSteps = useMemo(
     () =>
       continueFromDelivered
@@ -265,8 +298,8 @@ export function OrderTrackingTimeline({
   })();
 
   const statusUpdates = useMemo(
-    () => buildStepStatusUpdates(trackingProfile, sortedHistory, continueFromDelivered, order),
-    [trackingProfile, sortedHistory, continueFromDelivered, order],
+    () => buildStepStatusUpdates(trackingProfile, scopedHistory, continueFromDelivered, order),
+    [trackingProfile, scopedHistory, continueFromDelivered, order],
   );
 
   const timelineSteps = useMemo<TimelineStep[]>(() => {

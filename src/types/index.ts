@@ -365,6 +365,10 @@ export interface ReturnRequest {
   pickedUpAt?: string | null;
   pickupCancelledAt?: string | null;
   returnedAt?: string | null;
+  shiprocketReturnOrderId?: string | null;
+  shiprocketReturnShipmentId?: string | null;
+  reverseAwbCode?: string | null;
+  reverseTrackingUrl?: string | null;
   refundCouponId?: string | null;
   refundCouponCode?: string | null;
   createdAt: string;

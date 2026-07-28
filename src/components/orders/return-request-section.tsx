@@ -3,10 +3,9 @@
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { RotateCcw } from 'lucide-react';
+import { Minus, Plus, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ReturnImageUpload } from '@/components/orders/return-image-upload';
 import { returnRequestService } from '@/services/store.service';
@@ -173,6 +172,17 @@ export function ReturnRequestSection({ order, phone, onSubmitted }: ReturnReques
             <p className="text-xs text-brown-light">Note: {latestReturn.adminNotes}</p>
           )}
 
+          {latestReturn.reverseTrackingUrl ? (
+            <a
+              href={latestReturn.reverseTrackingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-sm font-medium text-gold underline"
+            >
+              Track reverse pickup
+            </a>
+          ) : null}
+
           {latestReturn.refundCouponCode && (
             <p className="text-xs text-charcoal">
               Store credit coupon:{' '}
@@ -250,17 +260,33 @@ export function ReturnRequestSection({ order, phone, onSubmitted }: ReturnReques
                           <Label htmlFor={`qty-${item.id}`} className="sr-only">
                             Quantity
                           </Label>
-                          <Input
+                          <div
                             id={`qty-${item.id}`}
-                            type="number"
-                            min={1}
-                            max={maxQty}
-                            value={selected}
-                            onChange={(e) =>
-                              setItemQty(item.id, Number(e.target.value) || 1, maxQty)
-                            }
-                            className="w-20"
-                          />
+                            className="flex items-center rounded-full border border-gold/25 bg-white"
+                            aria-label="Quantity selector"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setItemQty(item.id, selected - 1, maxQty)}
+                              disabled={selected <= 1}
+                              className="flex h-8 w-8 items-center justify-center text-charcoal transition-colors hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40"
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <span className="min-w-[1.5rem] text-center text-sm font-medium tabular-nums text-charcoal">
+                              {selected}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setItemQty(item.id, selected + 1, maxQty)}
+                              disabled={selected >= maxQty}
+                              className="flex h-8 w-8 items-center justify-center text-charcoal transition-colors hover:text-maroon disabled:cursor-not-allowed disabled:opacity-40"
+                              aria-label="Increase quantity"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </li>
