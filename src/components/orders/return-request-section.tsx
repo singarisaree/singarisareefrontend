@@ -49,7 +49,7 @@ export function ReturnRequestSection({ order, phone, onSubmitted }: ReturnReques
   if (order.status !== 'DELIVERED' && order.status !== 'RETURNED') return null;
 
   const withinWindow = isWithinReturnWindow(order);
-  const showForm = canRequestReturn(order);
+  const showForm = canRequestReturn();
   const returnDeadline = formatReturnDeadline(order);
   const activeReturn = hasActiveReturnRequest(order);
   const returnableItems = order.items.filter((item) => (returnable[item.id] ?? 0) > 0);

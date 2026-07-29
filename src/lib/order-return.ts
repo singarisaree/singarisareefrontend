@@ -64,7 +64,7 @@ export function isInternationalOrder(order: Pick<Order, 'shippingAddress'>): boo
 }
 
 /** Customer self-serve return requests are disabled. */
-export function canRequestReturn(_order: Order): boolean {
+export function canRequestReturn(): boolean {
   return false;
 }
 
@@ -175,7 +175,7 @@ export function getCustomerFacingOrderStatus(order: Order): string {
 }
 
 /** Customer return UI removed — always false. */
-export function shouldShowReturnBar(_order: Order): boolean {
+export function shouldShowReturnBar(): boolean {
   return false;
 }
 
@@ -202,7 +202,7 @@ export function hasPartialReturn(order: Pick<Order, 'status' | 'returnRequests'>
   );
 }
 
-export function isReturnEligible(_order: Order): boolean {
+export function isReturnEligible(): boolean {
   return false;
 }
 
