@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getRealtimeSocket, reconnectRealtimeSocket } from '@/lib/socket-client';
@@ -14,33 +14,22 @@ import { formatShortOrderNumber } from '@/lib/utils';
 
 export function AdminRealtimeSync() {
   const queryClient = useQueryClient();
-  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
     const socket = reconnectRealtimeSocket() ?? getRealtimeSocket();
     if (!socket) return;
 
-    const timers = timersRef.current;
-
-    const debouncedInvalidate = (key: string, queryKey: unknown[]) => {
-      const existing = timers.get(key);
-      if (existing) clearTimeout(existing);
-      timers.set(
-        key,
-        setTimeout(() => {
-          timers.delete(key);
-          void queryClient.invalidateQueries({ queryKey });
-        }, 400),
-      );
+    const invalidate = (queryKey: unknown[]) => {
+      void queryClient.invalidateQueries({ queryKey });
     };
 
     const refreshOrders = () => {
-      debouncedInvalidate('admin-orders', ['admin-orders']);
-      debouncedInvalidate('admin-dispatches', ['admin-dispatches']);
+      invalidate(['admin-orders']);
+      invalidate(['admin-dispatches']);
     };
 
     const refreshDashboard = () => {
-      debouncedInvalidate('dashboard-stats', ['dashboard-stats']);
+      invalidate(['dashboard-stats']);
     };
 
     const onOrderCreated = (payload: OrderRealtimePayload) => {
@@ -73,8 +62,8 @@ export function AdminRealtimeSync() {
     };
 
     const onReturnCreated = (payload: ReturnRequestRealtimePayload) => {
-      debouncedInvalidate('admin-orders', ['admin-orders']);
-      debouncedInvalidate('admin-refunds', ['admin-refunds']);
+      invalidate(['admin-orders']);
+      invalidate(['admin-refunds']);
       refreshDashboard();
       if (payload.orderId) {
         void queryClient.invalidateQueries({ queryKey: ['admin-order', payload.orderId] });
@@ -82,8 +71,8 @@ export function AdminRealtimeSync() {
     };
 
     const onReturnUpdated = (payload: ReturnRequestRealtimePayload) => {
-      debouncedInvalidate('admin-orders', ['admin-orders']);
-      debouncedInvalidate('admin-refunds', ['admin-refunds']);
+      invalidate(['admin-orders']);
+      invalidate(['admin-refunds']);
       refreshDashboard();
       if (payload.orderId) {
         void queryClient.invalidateQueries({ queryKey: ['admin-order', payload.orderId] });
@@ -91,7 +80,7 @@ export function AdminRealtimeSync() {
     };
 
     const onRefundProcessed = (payload: RefundRealtimePayload) => {
-      debouncedInvalidate('admin-refunds', ['admin-refunds']);
+      invalidate(['admin-refunds']);
       refreshOrders();
       refreshDashboard();
       if (payload.orderId) {
@@ -119,8 +108,6 @@ export function AdminRealtimeSync() {
     socket.on(REALTIME_EVENTS.DASHBOARD_REFRESH, refreshDashboard);
 
     return () => {
-      timers.forEach((t) => clearTimeout(t));
-      timers.clear();
       socket.off('connect', onConnect);
       socket.off(REALTIME_EVENTS.ORDER_CREATED, onOrderCreated);
       socket.off(REALTIME_EVENTS.ORDER_STATUS_CHANGED, onOrderStatusChanged);

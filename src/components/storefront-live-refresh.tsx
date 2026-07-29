@@ -7,7 +7,7 @@ import { refreshStorefrontCacheFromRealtime } from '@/actions/revalidate-storefr
 import { getRealtimeSocket } from '@/lib/socket-client';
 import { REALTIME_EVENTS } from '@/lib/realtime-events';
 
-const FOCUS_REFRESH_INTERVAL_MS = 30_000;
+const FOCUS_REFRESH_INTERVAL_MS = 120_000;
 /** Ignore focus/visibility right after load — those fire on refresh and cause a blank blink. */
 const MOUNT_GRACE_MS = 4_000;
 
@@ -44,10 +44,15 @@ export function StorefrontLiveRefresh() {
     const refreshFromRealtime = () => {
       if (refreshInFlight.current) return;
       refreshInFlight.current = true;
+
+      // Update active client queries immediately when the socket event arrives.
+      void queryClient.invalidateQueries();
+
       void (async () => {
         try {
           await refreshStorefrontCacheFromRealtime();
           router.refresh();
+          // Re-fetch once more after Next.js server caches have been cleared.
           await queryClient.invalidateQueries();
         } finally {
           refreshInFlight.current = false;

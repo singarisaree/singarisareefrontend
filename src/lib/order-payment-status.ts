@@ -76,8 +76,8 @@ export function isOrderPaymentPending(data: OrderPaymentStatus) {
 }
 
 function paymentStatusPollInterval(data: OrderPaymentStatus | undefined, fast: boolean) {
-  if (!data) return fast ? 250 : 1500;
-  return isOrderPaymentPending(data) ? (fast ? 250 : 1500) : false;
+  if (!data) return fast ? 1_500 : 4_000;
+  return isOrderPaymentPending(data) ? (fast ? 1_500 : 4_000) : false;
 }
 
 export function orderPaymentStatusQueryOptions(

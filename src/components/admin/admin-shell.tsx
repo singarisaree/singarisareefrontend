@@ -16,10 +16,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             // Keep list cache warm so back from detail feels instant
-            staleTime: 60_000,
-            gcTime: 10 * 60 * 1000,
+            staleTime: 2 * 60_000,
+            gcTime: 15 * 60 * 1000,
             retry: 1,
-            refetchOnMount: true,
+            refetchOnMount: false,
             refetchOnWindowFocus: false,
           },
         },

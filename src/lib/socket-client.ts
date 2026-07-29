@@ -9,13 +9,15 @@ function createSocket(): Socket {
   return io(API_ORIGIN, {
     path: '/socket.io',
     withCredentials: true,
-    transports: ['websocket', 'polling'],
+    // Prefer websocket; avoid continuous HTTP long-polling when WS is available.
+    transports: ['websocket'],
+    upgrade: false,
     autoConnect: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
-    reconnectionDelay: 800,
-    reconnectionDelayMax: 5000,
-    timeout: 12000,
+    reconnectionDelay: 1_000,
+    reconnectionDelayMax: 10_000,
+    timeout: 12_000,
   });
 }
 

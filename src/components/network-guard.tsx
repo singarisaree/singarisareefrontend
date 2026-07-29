@@ -45,7 +45,7 @@ export function NetworkGuard() {
       } catch {
         // still not reachable
       }
-    }, 5000);
+    }, 15_000);
 
     return () => clearInterval(interval);
   }, [show]);

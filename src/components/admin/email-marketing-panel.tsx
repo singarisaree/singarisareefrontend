@@ -79,7 +79,7 @@ export function EmailMarketingPanel({
   const { data: campaigns = [] } = useQuery({
     queryKey: ['admin-email-marketing-campaigns'],
     queryFn: adminEmailMarketingService.getCampaigns,
-    refetchInterval: 5000,
+    refetchInterval: 30_000,
   });
 
   const sendCampaign = useMutation({

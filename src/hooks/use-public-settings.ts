@@ -10,9 +10,9 @@ export function usePublicSettings() {
   const { data } = useQuery({
     queryKey: ['public-settings'],
     queryFn: () => homeService.getSettings(),
-    staleTime: 30 * 1000,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
     initialData: layoutSettings,
   });
 

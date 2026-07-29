@@ -96,7 +96,8 @@ export default function AdminOrdersPage() {
       ),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
-    refetchInterval: 5000,
+    // Socket.IO (AdminRealtimeSync) drives live updates — avoid 5s HTTP hammering.
+    refetchInterval: 120_000,
   });
 
   const orders = ordersResult?.data ?? [];
