@@ -11,6 +11,7 @@ import { getDeliveryTypeLabel, resolveDeliveryType } from '@/lib/delivery-type';
 import { printOrderReport, printInvoices, openShiprocketLabels } from '@/lib/order-print';
 import type { Order, ShippingAddress } from '@/types';
 import { StatusBadge, orderStatusVariant } from '@/components/admin/status-badge';
+import { hasPartialReturn } from '@/lib/order-return';
 import { ViewDetailsButton } from '@/components/admin/view-details-button';
 import { AdminTableSkeleton } from '@/components/admin/loading-skeletons';
 import { AdminTableLoadingOverlay } from '@/components/admin/admin-table-loading-overlay';
@@ -586,6 +587,11 @@ export default function AdminOrdersPage() {
                         <StatusBadge variant={orderStatusVariant(order.status)}>
                           {getOrderStatusLabel(order.status)}
                         </StatusBadge>
+                        {hasPartialReturn(order) ? (
+                          <p className="mt-1 text-[10px] font-medium text-violet-700">
+                            Partial return
+                          </p>
+                        ) : null}
                         {order.updatedAt && (
                           <p className="mt-1 text-[10px] text-[#94a3b8]">
                             {formatDate(order.updatedAt)} {formatTime(order.updatedAt)}

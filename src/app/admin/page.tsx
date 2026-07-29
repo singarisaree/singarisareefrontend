@@ -225,8 +225,8 @@ export default function AdminDashboardPage() {
                 tone={stats.readyToShip > 0 ? 'warn' : 'neutral'}
               />
               <AttentionLink
-                href="/admin/return-requests"
-                label="Open returns"
+                href="/admin/refunds?filter=pending"
+                label="Returns to refund"
                 count={stats.openReturnRequests}
                 tone={stats.openReturnRequests > 0 ? 'danger' : 'neutral'}
               />

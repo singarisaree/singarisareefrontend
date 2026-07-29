@@ -402,12 +402,13 @@ export interface RefundEligibleOrder {
   id: string;
   orderNumber: string;
   status: string;
-  refundType: 'CANCELLATION' | 'RETURN' | 'OTHER';
+  refundType: 'CANCELLATION' | 'RETURN' | 'RTO' | 'OTHER';
   customerName: string;
   customerPhone: string;
   grandTotal: number;
   eligibleAmount?: number;
   shippingCharge?: number;
+  allowsShippingDeduction?: boolean;
   paymentStatus: string | null;
   paymentMethod: string | null;
   createdAt: string;

@@ -20,6 +20,8 @@ import { StatusBadge, orderStatusVariant, returnRequestStatusVariant } from '@/c
 import { UnsavedGuard } from '@/components/admin/unsaved-guard';
 import { OrderTrackingTimeline } from '@/components/orders/order-tracking-timeline';
 import { OrderPaymentStatusNotice, shouldHideOrderTracking } from '@/components/orders/order-payment-status-notice';
+import { AdminMarkReturnSection } from '@/components/admin/admin-mark-return';
+import { hasPartialReturn } from '@/lib/order-return';
 import {
   AdminDetailAside,
   AdminDetailEmpty,
@@ -39,6 +41,19 @@ const STATUS_OPTIONS = [
   'PLACED', 'PAYMENT_PENDING', 'CONFIRMED', 'SHIPPED', 'IN_TRANSIT',
   'DELIVERED', 'RETURNED', 'REFUNDED', 'CANCELLED', 'FAILED', 'RTO',
 ];
+
+function getReturnRefundableTotal(
+  returnRequest: NonNullable<Order['returnRequests']>[number],
+  order: Order,
+) {
+  const returnedItemsTotal = (returnRequest.items ?? []).reduce(
+    (total, item) => total + Number(item.orderItem?.unitPrice ?? 0) * item.quantity,
+    0,
+  );
+  const merchandisePaid = Math.max(0, Number(order.subtotal) - Number(order.discountAmount));
+  return Math.min(returnedItemsTotal, merchandisePaid);
+}
+
 /** READY_TO_SHIP is set only by Create Shipment (Shiprocket), not the status dropdown. */
 
 /** Mirrors backend assertValidStatusTransition (READY_TO_SHIP excluded from manual set). */
@@ -49,7 +64,7 @@ const ALLOWED_STATUS_TRANSITIONS: Record<string, string[]> = {
   READY_TO_SHIP: ['SHIPPED', 'CANCELLED', 'RTO'],
   SHIPPED: ['IN_TRANSIT', 'DELIVERED', 'RTO'],
   IN_TRANSIT: ['DELIVERED', 'RTO'],
-  DELIVERED: ['RETURNED', 'REFUNDED'],
+  DELIVERED: ['REFUNDED'],
   RETURNED: ['REFUNDED'],
   RTO: ['CONFIRMED', 'CANCELLED', 'REFUNDED'],
   FAILED: ['PAYMENT_PENDING', 'CANCELLED'],
@@ -361,9 +376,16 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
       title={`Order ${formatShortOrderNumber(order.orderNumber)}`}
       subtitle={`Placed ${formatDateTime(order.createdAt)}${isFetching ? ' · Refreshing' : ''}`}
       badge={
-        <StatusBadge variant={orderStatusVariant(status || order.status)} className="text-xs">
-          {statusLabel}
-        </StatusBadge>
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge variant={orderStatusVariant(status || order.status)} className="text-xs">
+            {statusLabel}
+          </StatusBadge>
+          {hasPartialReturn(order) ? (
+            <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-800">
+              Partial return
+            </span>
+          ) : null}
+        </div>
       }
       footer={
         <AdminDetailSaveBar onSave={handleSave} saving={save.isPending} />
@@ -643,41 +665,59 @@ export default function AdminOrderDetailPage({ params }: { params: Promise<{ id:
           </AdminDetailSection>
 
           {(order.returnRequests?.length ?? 0) > 0 && (
-            <AdminDetailSection title="Returns">
+            <AdminDetailSection title="Returned products">
               <div className="space-y-2">
                 {order.returnRequests!.map((returnRequest) => (
-                  <div
-                    key={returnRequest.id}
-                    className="flex items-start justify-between gap-3 rounded-lg bg-[#f8fafc] px-3 py-2.5"
-                  >
-                    <div className="min-w-0">
-                      <StatusBadge variant={returnRequestStatusVariant(returnRequest.status)}>
-                        {getReturnRequestStatusLabel(returnRequest.status)}
-                      </StatusBadge>
-                      <p className="mt-1.5 truncate text-sm text-[#334155]">{returnRequest.reason}</p>
-                      <p className="mt-0.5 text-xs text-[#94a3b8]">{formatDate(returnRequest.createdAt)}</p>
-                      {returnRequest.reverseTrackingUrl ? (
-                        <a
-                          href={returnRequest.reverseTrackingUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-1 inline-block text-xs font-medium text-[#0f172a] underline"
+                  <div key={returnRequest.id} className="rounded-lg bg-[#f8fafc] px-3 py-2.5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <StatusBadge variant={returnRequestStatusVariant(returnRequest.status)}>
+                          {getReturnRequestStatusLabel(returnRequest.status)}
+                        </StatusBadge>
+                        <p className="mt-1.5 truncate text-sm text-[#334155]">
+                          {returnRequest.reason}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[#94a3b8]">
+                          {formatDate(returnRequest.createdAt)}
+                        </p>
+                      </div>
+                      {returnRequest.refundCouponCode ? (
+                        <span className="shrink-0 rounded bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">
+                          {returnRequest.refundCouponCode}
+                        </span>
+                      ) : (
+                        <Link
+                          href="/admin/refunds"
+                          className="shrink-0 text-xs font-bold text-[#0f172a] hover:underline"
                         >
-                          Reverse pickup tracking
-                        </a>
-                      ) : null}
+                          Issue store credit
+                        </Link>
+                      )}
                     </div>
-                    <Link
-                      href={`/admin/return-requests/${returnRequest.id}`}
-                      className="shrink-0 text-xs font-bold text-[#0f172a] hover:underline"
-                    >
-                      Open
-                    </Link>
+                    {(returnRequest.items?.length ?? 0) > 0 && (
+                      <ul className="mt-2 space-y-0.5 border-t border-[#e2e8f0] pt-2">
+                        {returnRequest.items!.map((item) => (
+                          <li key={item.id} className="truncate text-xs text-[#475569]">
+                            {item.quantity} × {item.orderItem?.productName ?? 'Item'}
+                            {item.orderItem?.colorName ? ` · ${item.orderItem.colorName}` : ''}
+                          </li>
+                        ))}
+                        <li className="flex items-center justify-between border-t border-[#e2e8f0] pt-2 text-sm font-semibold text-[#0f172a]">
+                          <span>Refundable total</span>
+                          <span>{formatPrice(getReturnRefundableTotal(returnRequest, order))}</span>
+                        </li>
+                      </ul>
+                    )}
                   </div>
                 ))}
               </div>
             </AdminDetailSection>
           )}
+
+          {(order.status === 'DELIVERED' || order.status === 'RETURNED') &&
+            (order.returnRequests?.length ?? 0) === 0 && (
+              <AdminMarkReturnSection order={order} />
+            )}
 
           <AdminDetailSection title="Shipment">
             <div className="space-y-4">

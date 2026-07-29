@@ -655,19 +655,6 @@ export const adminEmailMarketingService = {
 };
 
 export const adminReturnRequestService = {
-  getAll: (params?: {
-    status?: string;
-    page?: number;
-    limit?: number;
-    search?: string;
-    startDate?: string;
-    endDate?: string;
-  }) => apiGetPaginated<ReturnRequest[]>("/return-requests", params),
-  getById: (id: string) => apiGet<ReturnRequest>(`/return-requests/${id}`),
-  updateStatus: (
-    id: string,
-    data: { status: string; adminNotes?: string; force?: boolean },
-  ) => apiPatch<ReturnRequest>(`/return-requests/${id}/status`, data),
   adminCreate: (data: {
     orderId: string;
     reason: string;

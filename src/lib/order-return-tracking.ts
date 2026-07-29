@@ -59,9 +59,14 @@ export function getRefundTrackingDetails(
     'returnRequests' | 'refundAmount' | 'refundDeduction' | 'refundCouponCode' | 'refundUtr'
   >,
 ): RefundTrackingDetails {
+  const couponedReturn = (order.returnRequests ?? []).find((request) => request.refundCouponCode);
   const latestReturn = getLatestReturn(order as Order);
   return {
-    couponCode: order.refundCouponCode ?? latestReturn?.refundCouponCode ?? null,
+    couponCode:
+      order.refundCouponCode ??
+      couponedReturn?.refundCouponCode ??
+      latestReturn?.refundCouponCode ??
+      null,
     deduction: order.refundDeduction != null ? Number(order.refundDeduction) : null,
     refundAmount: order.refundAmount != null ? Number(order.refundAmount) : null,
   };
@@ -287,7 +292,7 @@ export function getOrderRefundTrackingEntry(
       id: `order-tracking-refunded-${refundEntry.timestamp}`,
       status: 'REFUNDED',
       description: refundEntry.description,
-      timestamp: refundEntry.timestamp,
+      timestamp: refundEntry.timestamp || new Date().toISOString(),
     };
   }
 
@@ -297,7 +302,7 @@ export function getOrderRefundTrackingEntry(
     description: order.refundCouponCode
       ? `Store credit coupon issued: ${order.refundCouponCode}`
       : 'Store credit coupon issued',
-    timestamp: order.refundedAt ?? new Date().toISOString(),
+    timestamp: order.refundedAt || new Date().toISOString(),
   };
 }
 
@@ -348,7 +353,7 @@ export function getEffectiveReturnTimeline(
         id: `return-coupon-${ret.id}`,
         status: 'REFUNDED',
         description: `Store credit coupon issued: ${ret.refundCouponCode}`,
-        timestamp: ret.returnedAt ?? ret.updatedAt,
+        timestamp: ret.returnedAt || ret.updatedAt || ret.createdAt || new Date().toISOString(),
       };
     }
     return null;

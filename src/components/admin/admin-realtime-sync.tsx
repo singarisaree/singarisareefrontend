@@ -73,25 +73,18 @@ export function AdminRealtimeSync() {
     };
 
     const onReturnCreated = (payload: ReturnRequestRealtimePayload) => {
-      debouncedInvalidate('admin-return-requests', ['admin-return-requests']);
+      debouncedInvalidate('admin-orders', ['admin-orders']);
+      debouncedInvalidate('admin-refunds', ['admin-refunds']);
       refreshDashboard();
-      toast.info('New return request received', { duration: 2500 });
-      if (payload.returnRequestId) {
-        void queryClient.invalidateQueries({
-          queryKey: ['admin-return-request', payload.returnRequestId],
-        });
+      if (payload.orderId) {
+        void queryClient.invalidateQueries({ queryKey: ['admin-order', payload.orderId] });
       }
     };
 
     const onReturnUpdated = (payload: ReturnRequestRealtimePayload) => {
-      debouncedInvalidate('admin-return-requests', ['admin-return-requests']);
       debouncedInvalidate('admin-orders', ['admin-orders']);
+      debouncedInvalidate('admin-refunds', ['admin-refunds']);
       refreshDashboard();
-      if (payload.returnRequestId) {
-        void queryClient.invalidateQueries({
-          queryKey: ['admin-return-request', payload.returnRequestId],
-        });
-      }
       if (payload.orderId) {
         void queryClient.invalidateQueries({ queryKey: ['admin-order', payload.orderId] });
       }

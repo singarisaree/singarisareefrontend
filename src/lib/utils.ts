@@ -38,20 +38,26 @@ export function formatAmount(amount: number): string {
   }).format(value);
 }
 
-export function formatDate(date: string | Date): string {
+export function formatDate(date: string | Date | null | undefined): string {
+  if (date == null || date === '') return '—';
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) return '—';
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  }).format(new Date(date));
+  }).format(parsed);
 }
 
-export function formatTime(date: string | Date): string {
+export function formatTime(date: string | Date | null | undefined): string {
+  if (date == null || date === '') return '—';
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) return '—';
   return new Intl.DateTimeFormat('en-IN', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  }).format(new Date(date));
+  }).format(parsed);
 }
 
 /** Date + time, e.g. "11 July 2026, 1:16 pm" */

@@ -45,7 +45,15 @@ const FILTER_VALUES = ["all", "pending", "completed"] as const;
 function refundTypeLabel(type: RefundEligibleOrder["refundType"]) {
   if (type === "CANCELLATION") return "Cancellation";
   if (type === "RETURN") return "Returned";
+  if (type === "RTO") return "RTO";
   return type;
+}
+
+function allowsShippingDeduction(order: RefundEligibleOrder) {
+  if (typeof order.allowsShippingDeduction === "boolean") {
+    return order.allowsShippingDeduction;
+  }
+  return order.refundType === "RETURN" || order.refundType === "RTO";
 }
 
 export default function AdminRefundsPage() {
@@ -97,13 +105,11 @@ export default function AdminRefundsPage() {
     mutationFn: () => {
       if (!selectedOrder) throw new Error("No order selected");
       const eligible = selectedOrder.eligibleAmount ?? selectedOrder.grandTotal;
-      const isCancellation = selectedOrder.refundType === "CANCELLATION";
-      const deduct = isCancellation
-        ? 0
-        : Math.max(0, Number(deduction) || 0);
-      const amount = isCancellation
-        ? eligible
-        : Math.max(0, eligible - deduct);
+      const canDeduct = allowsShippingDeduction(selectedOrder);
+      const deduct = canDeduct ? Math.max(0, Number(deduction) || 0) : 0;
+      const amount = canDeduct
+        ? Math.max(0, eligible - deduct)
+        : eligible;
       return adminRefundService.process(selectedOrder.id, {
         deduction: deduct,
         couponAmount: amount,
@@ -139,8 +145,7 @@ export default function AdminRefundsPage() {
       <div>
         <h1 className="text-2xl font-bold text-[#0f172a]">Coupon refunds</h1>
         <p className="mt-1 text-sm text-[#64748b]">
-          Issue phone-linked store credit coupons for cancelled or returned paid
-          orders (no cash refunds)
+          Paid orders that are cancelled, returned, partially returned, or RTO
         </p>
       </div>
 
@@ -237,7 +242,9 @@ export default function AdminRefundsPage() {
                         variant={
                           order.refundType === "CANCELLATION"
                             ? "danger"
-                            : "neutral"
+                            : order.refundType === "RTO"
+                              ? "pending"
+                              : "neutral"
                         }
                       >
                         {refundTypeLabel(order.refundType)}
@@ -374,7 +381,9 @@ export default function AdminRefundsPage() {
                   Order {formatShortOrderNumber(selectedOrder.orderNumber)} ·{" "}
                   {selectedOrder.refundType === "RETURN"
                     ? "Returned items"
-                    : "Eligible"}{" "}
+                    : selectedOrder.refundType === "RTO"
+                      ? "RTO"
+                      : "Eligible"}{" "}
                   {formatPrice(
                     selectedOrder.eligibleAmount ?? selectedOrder.grandTotal,
                   )}
@@ -399,11 +408,11 @@ export default function AdminRefundsPage() {
                   {(() => {
                     const eligible =
                       selectedOrder.eligibleAmount ?? selectedOrder.grandTotal;
-                    const isCancellation =
-                      selectedOrder.refundType === "CANCELLATION";
-                    const deductValue = isCancellation
-                      ? 0
-                      : Math.max(0, Number(deduction) || 0);
+                    const canDeduct = allowsShippingDeduction(selectedOrder);
+                    const shippingPaid = Number(selectedOrder.shippingCharge ?? 0);
+                    const deductValue = canDeduct
+                      ? Math.max(0, Number(deduction) || 0)
+                      : 0;
                     const creditAmount = Math.max(0, eligible - deductValue);
 
                     return (
@@ -419,16 +428,18 @@ export default function AdminRefundsPage() {
                                 {formatPrice(eligible)}
                               </dd>
                             </div>
-                            <div className="flex items-center justify-between gap-3">
-                              <dt className="text-[#64748b]">
-                                Shipping deducted
-                              </dt>
-                              <dd className="font-medium text-[#0f172a]">
-                                {deductValue > 0
-                                  ? `− ${formatPrice(deductValue)}`
-                                  : formatPrice(0)}
-                              </dd>
-                            </div>
+                            {canDeduct ? (
+                              <div className="flex items-center justify-between gap-3">
+                                <dt className="text-[#64748b]">
+                                  Shipping deducted
+                                </dt>
+                                <dd className="font-medium text-[#0f172a]">
+                                  {deductValue > 0
+                                    ? `− ${formatPrice(deductValue)}`
+                                    : formatPrice(0)}
+                                </dd>
+                              </div>
+                            ) : null}
                             <div className="flex items-center justify-between gap-3 border-t border-[#e2e8f0] pt-2">
                               <dt className="font-semibold text-[#0f172a]">
                                 Store credit coupon
@@ -440,7 +451,7 @@ export default function AdminRefundsPage() {
                           </dl>
                         </div>
 
-                        {isCancellation ? null : (
+                        {canDeduct ? (
                           <div>
                             <Label htmlFor="shippingDeduction">
                               Shipping deduction
@@ -461,8 +472,32 @@ export default function AdminRefundsPage() {
                               }}
                               className="mt-1.5"
                             />
+                            {shippingPaid > 0 ? (
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setDeduction("0")}
+                                >
+                                  No deduction
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setDeduction(
+                                      String(Math.min(eligible, shippingPaid)),
+                                    )
+                                  }
+                                >
+                                  Deduct shipping ({formatPrice(shippingPaid)})
+                                </Button>
+                              </div>
+                            ) : null}
                           </div>
-                        )}
+                        ) : null}
                       </>
                     );
                   })()}
@@ -477,15 +512,15 @@ export default function AdminRefundsPage() {
                     variant="gold"
                     disabled={
                       processMutation.isPending ||
-                      (selectedOrder.refundType === "CANCELLATION"
-                        ? (selectedOrder.eligibleAmount ??
-                            selectedOrder.grandTotal) <= 0
-                        : Math.max(
+                      (allowsShippingDeduction(selectedOrder)
+                        ? Math.max(
                             0,
                             (selectedOrder.eligibleAmount ??
                               selectedOrder.grandTotal) -
                               (Number(deduction) || 0),
-                          ) <= 0)
+                          ) <= 0
+                        : (selectedOrder.eligibleAmount ??
+                            selectedOrder.grandTotal) <= 0)
                     }
                     onClick={() => processMutation.mutate()}
                   >

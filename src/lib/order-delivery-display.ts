@@ -336,8 +336,10 @@ export function getOrderListStatusLine(
   const deliveredUpdate = order.trackingHistory?.find((e) => e.status === 'DELIVERED');
   const deliveredTimestamp = deliveredAt || deliveredUpdate?.timestamp;
 
-  if (displayStatus === 'DELIVERED' && deliveredTimestamp) {
-    return `Delivered on ${formatDate(deliveredTimestamp)}`;
+  if (displayStatus === 'DELIVERED') {
+    return deliveredTimestamp
+      ? `Delivered on ${formatDate(deliveredTimestamp)}`
+      : 'Delivered';
   }
   if (displayStatus.startsWith('RETURN_')) {
     return getOrderStatusLabel(displayStatus);

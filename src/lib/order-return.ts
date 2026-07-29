@@ -3,6 +3,10 @@ import { resolveDeliveryType } from '@/lib/delivery-type';
 
 export const RETURN_WINDOW_DAYS = 3;
 
+/** Customer self-serve returns are disabled — contact admin within this window. */
+export const DAMAGE_CONTACT_PHONE = '9490458789';
+export const DAMAGE_CONTACT_DISPLAY = '+91 9490458789';
+
 const ACTIVE_RETURN_STATUSES: ReturnRequestStatus[] = [
   'REQUESTED',
   'ACCEPTED',
@@ -12,7 +16,7 @@ const ACTIVE_RETURN_STATUSES: ReturnRequestStatus[] = [
 ];
 
 const RETURN_POLICY_SUMMARY =
-  'Returns are accepted within 3 days of delivery. You may return selected products. Approved cases receive a store credit coupon (not cash) after shipping deductions, linked to your order mobile number.';
+  'For damages within 3 days of delivery, please contact +91 9490458789. Our team will arrange the return and store credit if approved.';
 
 export function getReturnPolicySummary(): string {
   return RETURN_POLICY_SUMMARY;
@@ -59,14 +63,9 @@ export function isInternationalOrder(order: Pick<Order, 'shippingAddress'>): boo
   return resolveDeliveryType(order.shippingAddress) === 'INTERNATIONAL';
 }
 
-export function canRequestReturn(order: Order): boolean {
-  if (isInternationalOrder(order)) return false;
-  if (isRefundComplete(order)) return false;
-  if (!isWithinReturnWindow(order)) return false;
-  const latest = getLatestReturn(order);
-  if (latest && ACTIVE_RETURN_STATUSES.includes(latest.status)) return false;
-  const returnable = getReturnableQuantities(order);
-  return Object.values(returnable).some((qty) => qty > 0);
+/** Customer self-serve return requests are disabled. */
+export function canRequestReturn(_order: Order): boolean {
+  return false;
 }
 
 export function getReturnableQuantities(order: Order): Record<string, number> {
@@ -163,7 +162,6 @@ export function getCustomerFacingOrderStatus(order: Order): string {
     return 'REFUNDED';
   }
 
-  // Prefer return progress over stale "Delivered" while a return is active.
   if (status === 'DELIVERED' && hasActiveReturnRequest(order)) {
     const latest = getLatestReturn(order);
     if (latest?.status === 'REQUESTED') return 'RETURN_REQUESTED';
@@ -176,12 +174,17 @@ export function getCustomerFacingOrderStatus(order: Order): string {
   return status;
 }
 
-export function shouldShowReturnBar(order: Order): boolean {
+/** Customer return UI removed — always false. */
+export function shouldShowReturnBar(_order: Order): boolean {
+  return false;
+}
+
+/** Show damage contact message for 3 days after delivery (India orders). */
+export function shouldShowDamageContactNotice(order: Order, now = new Date()): boolean {
   if (isInternationalOrder(order)) return false;
   if (isRefundComplete(order)) return false;
-  if (order.status === 'REFUNDED') return false;
-  if (order.status !== 'DELIVERED' && order.status !== 'RETURNED') return false;
-  return canRequestReturn(order) || hasActiveReturnRequest(order);
+  if (order.status !== 'DELIVERED') return false;
+  return isWithinReturnWindow(order, now);
 }
 
 export function isReturnWindowClosed(order: Order, now = new Date()): boolean {
@@ -192,8 +195,15 @@ export function isReturnWindowClosed(order: Order, now = new Date()): boolean {
   return now > deadline;
 }
 
-export function isReturnEligible(order: Order): boolean {
-  return canRequestReturn(order);
+export function hasPartialReturn(order: Pick<Order, 'status' | 'returnRequests'>): boolean {
+  if (order.status !== 'DELIVERED') return false;
+  return (order.returnRequests ?? []).some(
+    (request) => !request.status || request.status === 'RETURNED',
+  );
+}
+
+export function isReturnEligible(_order: Order): boolean {
+  return false;
 }
 
 export function formatReturnDeadline(order: Order): string | null {
@@ -207,7 +217,7 @@ export function formatReturnDeadline(order: Order): string | null {
 }
 
 export const REFUND_CREDIT_DAYS_MESSAGE =
-  'After pickup is complete, our team will issue a store credit coupon (not a cash refund). Shipping charges may be deducted. The coupon is linked to your order mobile number and can be used on future orders with the same number until the credit balance is fully used.';
+  'After your return is received, our team may issue a store credit coupon (not a cash refund). Shipping charges may be deducted. The coupon is linked to your order mobile number.';
 
 export function shouldShowRefundCreditNotice(order: Order): boolean {
   if (isRefundComplete(order)) return false;

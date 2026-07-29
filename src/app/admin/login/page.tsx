@@ -38,6 +38,8 @@ export default function AdminLoginPage() {
     } catch (err) {
       if (isConnectionError(err)) {
         toast.error(getConnectionErrorMessage());
+      } else if (axios.isAxiosError(err) && err.response?.status === 429) {
+        toast.error('Too many requests. Wait a moment and try again.');
       } else if (axios.isAxiosError(err) && err.response?.status === 401) {
         toast.error('Invalid credentials');
       } else {

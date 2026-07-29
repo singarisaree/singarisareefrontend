@@ -19,18 +19,16 @@ import {
   X,
   UserCircle,
   Truck,
-  RotateCcw,
   IndianRupee,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { adminAuthService, adminCategoryService, adminDashboardService, adminOrderService, adminProductService, adminReturnRequestService } from '@/services/admin.service';
+import { adminAuthService, adminCategoryService, adminDashboardService, adminOrderService, adminProductService } from '@/services/admin.service';
 import { toast } from 'sonner';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, prefetchKey: 'dashboard-stats' as const },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart, prefetchKey: 'admin-orders' as const },
-  { href: '/admin/return-requests', label: 'Return Requests', icon: RotateCcw, prefetchKey: 'admin-return-requests' as const },
   { href: '/admin/refunds', label: 'Coupon refunds', icon: IndianRupee, prefetchKey: 'admin-refunds' as const },
   { href: '/admin/dispatches', label: 'Dispatches', icon: Truck, prefetchKey: 'admin-dispatches' as const },
   { href: '/admin/products', label: 'Products', icon: Package, prefetchKey: 'admin-products' as const },
@@ -66,13 +64,6 @@ export function AdminSidebar() {
         void queryClient.prefetchQuery({
           queryKey: ['admin-orders', 'ALL', '', 1, 20],
           queryFn: () => adminOrderService.list({ page: '1', limit: '20' }),
-          staleTime: 30 * 1000,
-        });
-        break;
-      case 'admin-return-requests':
-        void queryClient.prefetchQuery({
-          queryKey: ['admin-return-requests', 'ALL', '', 1, 20],
-          queryFn: () => adminReturnRequestService.getAll({ page: 1, limit: 20 }),
           staleTime: 30 * 1000,
         });
         break;

@@ -5,29 +5,23 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, RotateCcw, ShoppingBag } from 'lucide-react';
+import { ChevronDown, ChevronRight, Phone, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/layout/footer';
 import { OrderTrackingTimeline } from '@/components/orders/order-tracking-timeline';
 import { DeliveryTypeBadge } from '@/components/orders/delivery-type-badge';
 import { StoreCreditCouponCard } from '@/components/orders/store-credit-coupon-card';
 import { shouldHideOrderTracking } from '@/components/orders/order-payment-status-notice';
-import { getCustomerFacingOrderStatus } from '@/lib/order-return';
-import { ReturnRequestSection } from '@/components/orders/return-request-section';
+import {
+  DAMAGE_CONTACT_DISPLAY,
+  DAMAGE_CONTACT_PHONE,
+  formatReturnDeadline,
+  getCustomerFacingOrderStatus,
+  shouldShowDamageContactNotice,
+} from '@/lib/order-return';
 import { useCustomerAuth } from '@/components/customer-auth-provider';
 import { orderService } from '@/services/store.service';
 import { getApiErrorMessage } from '@/lib/api-error';
-import {
-  formatReturnDeadline,
-  getReturnBarButtonLabel,
-  getReturnBarStatusLabel,
-  hasActiveReturnRequest,
-  isReturnEligible,
-  isReturnRejected,
-  isReturnWindowClosed,
-  isInternationalOrder,
-  shouldShowReturnBar,
-} from '@/lib/order-return';
 import {
   cn,
   formatPrice,
@@ -40,7 +34,7 @@ import {
 } from '@/lib/utils';
 import { useCustomerOrderRealtime } from '@/hooks/use-customer-order-realtime';
 import { getOrderListStatusLine, resolveDeliveryType, isOrderShipmentBooked, formatCarrierDeliveryStatusLine } from '@/lib/order-delivery-display';
-import type { Order, ReturnRequest } from '@/types';
+import type { Order } from '@/types';
 
 function OrderCardSkeleton() {
   return (
@@ -81,7 +75,6 @@ function MyOrdersPageContent() {
   const focusOrderParam = searchParams.get('order')?.trim() || '';
   const { customer, isLoading: authLoading, openLogin } = useCustomerAuth();
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
-  const [expandedReturnOrderId, setExpandedReturnOrderId] = useState<string | null>(null);
 
   const customerPhone = customer?.phone ?? '';
 
@@ -134,22 +127,6 @@ function MyOrdersPageContent() {
 
   const toggleOrder = (orderId: string) => {
     setExpandedOrderId((current) => (current === orderId ? null : orderId));
-    setExpandedReturnOrderId(null);
-  };
-
-  const openReturnFlow = (orderId: string) => {
-    setExpandedReturnOrderId((current) => (current === orderId ? null : orderId));
-    setExpandedOrderId(orderId);
-  };
-
-  const handleReturnSubmitted = (orderId: string, request: ReturnRequest) => {
-    queryClient.setQueryData<Order[]>(['my-orders', customerPhone], (prev) =>
-      (prev ?? []).map((order) =>
-        order.id === orderId
-          ? { ...order, returnRequests: [request, ...(order.returnRequests || [])] }
-          : order,
-      ),
-    );
   };
 
   const showSkeleton = authLoading || !customer || ordersLoading;
@@ -205,17 +182,10 @@ function MyOrdersPageContent() {
               {orders.map((order) => {
                 const displayStatus = getCustomerFacingOrderStatus(order);
                 const isExpanded = expandedOrderId === order.id;
-                const isReturnExpanded = expandedReturnOrderId === order.id;
                 const firstItem = order.items[0];
                 const extraItems = order.items.length - 1;
-                const returnEligible = isReturnEligible(order);
-                const activeReturn = hasActiveReturnRequest(order);
-                const returnRejected = isReturnRejected(order);
-                const showReturnBar = shouldShowReturnBar(order);
+                const showDamageContact = shouldShowDamageContactNotice(order);
                 const returnDeadline = formatReturnDeadline(order);
-                const returnBarStatus = getReturnBarStatusLabel(order);
-                const returnButtonLabel = getReturnBarButtonLabel(order, isReturnExpanded);
-                const returnWindowClosed = isReturnWindowClosed(order);
                 const statusLine = getOrderListStatusLine(order, displayStatus);
                 const deliveryType = resolveDeliveryType(order.shippingAddress);
                 const shipmentBooked = isOrderShipmentBooked(order);
@@ -370,59 +340,38 @@ function MyOrdersPageContent() {
                         </div>
                       )}
 
-                    {showReturnBar && (
-                      <div className="border-t border-beige px-4 py-2.5 sm:px-5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            {returnBarStatus && (
-                              <p
-                                className={cn(
-                                  'text-[10px] font-medium uppercase tracking-wide',
-                                  returnRejected ? 'text-red-600' : 'text-gold',
-                                )}
-                              >
-                                {returnBarStatus}
-                              </p>
-                            )}
-                            {returnDeadline && !activeReturn && (
-                              <p className="text-xs text-brown-light">
-                                Return till{' '}
-                                <span className="font-medium text-charcoal">{returnDeadline}</span>
-                              </p>
-                            )}
-                          </div>
-                          {activeReturn || returnEligible ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 shrink-0 px-3 text-[11px]"
-                              onClick={() => openReturnFlow(order.id)}
-                            >
-                              <RotateCcw className="h-3 w-3" />
-                              {returnButtonLabel}
-                            </Button>
-                          ) : null}
-                        </div>
-                      </div>
-                    )}
-
-                    {returnWindowClosed && !showReturnBar && returnDeadline && (
-                      <div className="border-t border-beige px-4 py-2.5 sm:px-5">
-                        <p className="text-xs text-brown-light">
-                          Return window closed on{' '}
-                          <span className="font-medium text-charcoal">{returnDeadline}</span>
+                    {showDamageContact && (
+                      <div className="border-t border-beige px-4 py-3 sm:px-5">
+                        <p className="text-sm text-charcoal">
+                          If you have any damages, please contact{' '}
+                          <a
+                            href={`tel:+91${DAMAGE_CONTACT_PHONE}`}
+                            className="font-semibold text-maroon underline"
+                          >
+                            {DAMAGE_CONTACT_DISPLAY}
+                          </a>
+                          .
                         </p>
-                      </div>
-                    )}
-
-                    {customerPhone && isReturnExpanded && (
-                      <div className="border-t border-beige px-4 pb-4 pt-2 sm:px-5">
-                        <ReturnRequestSection
-                          order={order}
-                          phone={customerPhone}
-                          onSubmitted={(request) => handleReturnSubmitted(order.id, request)}
-                        />
+                        {returnDeadline ? (
+                          <p className="mt-1 text-xs text-brown-light">
+                            Available till{' '}
+                            <span className="font-medium text-charcoal">{returnDeadline}</span>{' '}
+                            (3 days from delivery)
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-xs text-brown-light">
+                            Within 3 days of delivery
+                          </p>
+                        )}
+                        <a
+                          href={`https://wa.me/91${DAMAGE_CONTACT_PHONE}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-maroon hover:underline"
+                        >
+                          <Phone className="h-3 w-3" />
+                          WhatsApp / call
+                        </a>
                       </div>
                     )}
 
@@ -463,7 +412,9 @@ function MyOrdersPageContent() {
 
                         {!shouldHideOrderTracking(order) && (
                           <div className="mt-5">
-                            {deliveryType === 'INTERNATIONAL' && shipmentBooked ? (
+                            {['DELIVERED', 'RETURNED', 'REFUNDED'].includes(displayStatus) ? (
+                              <p className="mb-2 text-xs text-brown-light">{statusLine}</p>
+                            ) : deliveryType === 'INTERNATIONAL' && shipmentBooked ? (
                               <p className="mb-2 text-xs text-brown-light">
                                 {formatCarrierDeliveryStatusLine(order, 'INTERNATIONAL')}
                               </p>
@@ -536,7 +487,8 @@ function MyOrdersPageContent() {
                           </div>
                         </div>
 
-                        {order.refundCouponCode ? (
+                        {order.refundCouponCode ||
+                        order.returnRequests?.some((request) => request.refundCouponCode) ? (
                           <StoreCreditCouponCard order={order} />
                         ) : null}
 
@@ -550,14 +502,6 @@ function MyOrdersPageContent() {
                             Track shipment
                             <ChevronRight className="h-4 w-4" />
                           </a>
-                        )}
-
-                        {customerPhone && !showReturnBar && displayStatus === 'DELIVERED' && !isInternationalOrder(order) && (
-                          <ReturnRequestSection
-                            order={order}
-                            phone={customerPhone}
-                            onSubmitted={(request) => handleReturnSubmitted(order.id, request)}
-                          />
                         )}
                       </div>
                     )}

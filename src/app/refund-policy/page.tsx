@@ -6,12 +6,24 @@ export const metadata: Metadata = { title: 'Returns & Exchange Policy' };
 
 export default function RefundPolicyPage() {
   return (
-    <PolicyPage title="Returns & Exchange Policy" lastUpdated="July 13, 2026">
+    <PolicyPage title="Returns & Exchange Policy" lastUpdated="July 29, 2026">
       <h2>Returns</h2>
       <p>
-        Returns are accepted within <strong>3 days of delivery</strong> for verified damage or
-        quality issues. You may return one or more products from an order. Clear photos of the
-        product are required when you submit a return request.
+        Online return requests are not available. For verified damage or quality issues within{' '}
+        <strong>3 days of delivery</strong>, please contact us. Our team will arrange the return and
+        any store credit if approved.
+      </p>
+      <h2>How to contact us</h2>
+      <p>
+        Call or WhatsApp{' '}
+        <a href={`tel:${STORE_CONTACT.phone.replace(/\s/g, '')}`} className="text-maroon underline">
+          {STORE_CONTACT.phone}
+        </a>{' '}
+        or email{' '}
+        <a href={`mailto:${STORE_CONTACT.email}`} className="text-maroon underline">
+          {STORE_CONTACT.email}
+        </a>{' '}
+        within 3 days of delivery with your order details and clear photos of the issue.
       </p>
       <h2>No cash refunds</h2>
       <p>
@@ -20,28 +32,15 @@ export default function RefundPolicyPage() {
       </p>
       <h2>Store credit coupon</h2>
       <p>
-        After we complete your return, cancellation, or RTO review, our team issues a coupon for
-        the eligible product amount after shipping deductions. That coupon is linked to the mobile
-        number used on the original order. You can apply it on future orders with that same shipping
-        contact number until the store credit balance is fully used.
+        After we receive and review your return, cancellation, or RTO case, our team may issue a
+        coupon for the eligible product amount after shipping deductions. That coupon is linked to
+        the mobile number used on the original order. You can apply it on future orders with that
+        same shipping contact number until the store credit balance is fully used.
       </p>
       <h2>Shipping deductions</h2>
       <p>
-        Shipping and related handling charges may be deducted from the store credit amount.
-        The final coupon value is confirmed by our team before the coupon is issued.
-      </p>
-      <h2>Damaged products</h2>
-      <p>
-        If you receive a damaged product, contact us at{' '}
-        <a href={`mailto:${STORE_CONTACT.email}`} className="text-maroon underline">
-          {STORE_CONTACT.email}
-        </a>{' '}
-        or call{' '}
-        <a href={`tel:${STORE_CONTACT.phone.replace(/\s/g, '')}`} className="text-maroon underline">
-          {STORE_CONTACT.phone}
-        </a>{' '}
-        within 48 hours of delivery with clear photos or videos. Our team will verify the issue
-        before arranging a return or store credit.
+        Shipping and related handling charges may be deducted from the store credit amount. The
+        final coupon value is confirmed by our team before the coupon is issued.
       </p>
       <h2>Failed delivery / RTO</h2>
       <p>
