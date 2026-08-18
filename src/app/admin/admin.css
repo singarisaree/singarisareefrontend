@@ -1,15 +1,15 @@
-/* Admin panel theme — Tacnique-style corporate console */
+/* Admin panel theme — Singari Sarees Branded Console */
 .admin-root {
-  --admin-navy: #0f172a;
-  --admin-navy-hover: #1e293b;
-  --admin-sidebar: #f8fafc;
-  --admin-border: #e2e8f0;
-  --admin-muted: #64748b;
-  --admin-bg: #f1f5f9;
-  --admin-success: #16a34a;
-  --admin-success-bg: #dcfce7;
-  --admin-inactive-bg: #f1f5f9;
-  --admin-inactive-text: #64748b;
+  --admin-navy: #7a0012; /* Maroon */
+  --admin-navy-hover: #5c000e; /* Dark Maroon */
+  --admin-sidebar: #ffffff; /* White */
+  --admin-border: #f5ede6; /* Beige border */
+  --admin-muted: #666666; /* Muted Charcoal */
+  --admin-bg: #f5ede6; /* Beige background (slightly darker than cream) */
+  --admin-success: #7a0012;
+  --admin-success-bg: #fffaf7;
+  --admin-inactive-bg: #f5ede6;
+  --admin-inactive-text: #666666;
 }
 
 .admin-root {
@@ -28,3 +28,35 @@
   font-family: var(--font-poppins), system-ui, sans-serif;
   letter-spacing: normal;
 }
+
+/* Override utility classes to use custom brand colors in admin shell */
+.admin-root .bg-\[\#0f172a\] {
+  background-color: var(--admin-navy) !important;
+}
+.admin-root .hover\:bg-\[\#1e293b\]:hover {
+  background-color: var(--admin-navy-hover) !important;
+}
+.admin-root .text-\[\#0f172a\] {
+  color: var(--admin-navy) !important;
+}
+.admin-root .border-\[\#0f172a\] {
+  border-color: var(--admin-navy) !important;
+}
+.admin-root .accent-\[\#0f172a\] {
+  accent-color: var(--admin-navy) !important;
+}
+
+/* Override blue-white/slate backgrounds with cream */
+.admin-root .bg-\[\#f8fafc\] {
+  background-color: var(--admin-bg) !important;
+}
+.admin-root .hover\:bg-\[\#f8fafc\]:hover {
+  background-color: var(--admin-bg) !important;
+}
+.admin-root .bg-\[\#f1f5f9\] {
+  background-color: var(--admin-bg) !important;
+}
+.admin-root .border-\[\#e2e8f0\] {
+  border-color: var(--admin-border) !important;
+}
+
