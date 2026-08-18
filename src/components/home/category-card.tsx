@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import type { Category } from '@/types';
+import { resolveStorefrontImageUrl } from '@/lib/image';
 
 interface CategoryCardProps {
   category: Category;
@@ -30,7 +31,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
       <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-beige">
         {category.imageUrl ? (
           <Image
-            src={category.imageUrl}
+            src={resolveStorefrontImageUrl(category.imageUrl)}
             alt={category.name}
             fill
             sizes="(max-width: 640px) 42vw, (max-width: 1024px) 11rem, 14rem"

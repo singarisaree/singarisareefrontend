@@ -69,7 +69,7 @@ export async function HomePageContent() {
               {categories.slice(0, 100).map((category) => (
                 <div
                   key={category.id}
-                  className="w-[70vw] max-w-[18rem] shrink-0 sm:w-72 lg:w-80"
+                  className="w-[46vw] max-w-[12.8rem] shrink-0 sm:w-[13.2rem] lg:w-[15.4rem]"
                 >
                   <CategoryCard category={category} />
                 </div>
