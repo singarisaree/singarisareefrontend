@@ -37,7 +37,7 @@ export function ProductCard({ product, variant = 'default', priority = false }: 
           ) : (
             <div className="flex h-full items-center justify-center text-muted">No Image</div>
           )}
-          {discount > 0 && variant === 'default' && (
+          {discount > 0 && (
             <span className="absolute left-3 top-3 bg-maroon px-2 py-0.5 text-[0.65rem] font-semibold tracking-wide text-white">
               {discount}% OFF
             </span>
