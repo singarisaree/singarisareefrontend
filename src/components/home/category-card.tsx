@@ -28,7 +28,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
       onFocus={warmRoute}
       onTouchStart={warmRoute}
     >
-      <div className="relative aspect-[3/4] overflow-hidden rounded-lg bg-beige">
+      <div className="relative aspect-[3/4.6] sm:aspect-[3/4] overflow-hidden rounded-lg bg-beige">
         {category.imageUrl ? (
           <Image
             src={resolveStorefrontImageUrl(category.imageUrl)}
@@ -50,7 +50,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
         {/* Content Section */}
         <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 flex flex-col items-start gap-3 sm:gap-4">
           <div className="space-y-1.5 text-left">
-            {category.description && (
+            {category.description && category.description.trim().length > 1 && (
               <span className="block text-[0.6rem] font-semibold tracking-[0.2em] text-gold uppercase sm:text-[0.7rem]">
                 {category.description}
               </span>
