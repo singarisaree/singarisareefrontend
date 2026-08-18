@@ -55,7 +55,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
                 {category.description}
               </span>
             )}
-            <h3 className="font-serif text-xl font-bold leading-tight text-white sm:text-[1.625rem] md:text-3xl line-clamp-2">
+            <h3 className="font-serif text-xl font-bold leading-tight text-white sm:text-[1.625rem] md:text-2xl line-clamp-2">
               {category.name}
             </h3>
           </div>
