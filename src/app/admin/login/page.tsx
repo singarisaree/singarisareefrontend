@@ -51,41 +51,51 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f1f5f9] px-4">
-      <div className="w-full max-w-md rounded-2xl border border-[#e2e8f0] bg-white p-8 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center bg-cream pattern-mandala px-4 relative overflow-hidden">
+      {/* Soft background glow */}
+      <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full bg-maroon/5 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 h-80 w-80 rounded-full bg-gold/10 blur-3xl pointer-events-none" />
+
+      <div className="w-full max-w-md rounded-2xl border border-maroon/10 bg-white/95 backdrop-blur-sm p-8 shadow-xl relative z-10 hover:border-maroon/20 transition-all duration-300">
         <div className="flex flex-col items-center text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#0f172a] text-lg font-bold text-white">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-maroon border-2 border-gold text-xl font-serif font-semibold text-gold shadow-md shadow-maroon/20">
             SS
           </div>
-          <h1 className="mt-4 text-xl font-bold text-[#0f172a]">Singari Sarees</h1>
-          <p className="text-sm text-[#64748b]">Admin Console — Sign in to continue</p>
+          <h1 className="mt-5 text-2xl font-serif font-semibold text-maroon tracking-wide">Singari Sarees</h1>
+          <p className="mt-1 text-sm text-muted font-medium">Admin Console — Sign in to continue</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
+        <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-6">
           <div>
-            <label htmlFor="email" className="text-sm font-medium text-[#334155]">Email</label>
+            <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-maroon-dark">
+              Email Address
+            </label>
             <input
               id="email"
               type="email"
               {...register('email')}
-              className="mt-1.5 h-11 w-full rounded-lg border border-[#e2e8f0] px-4 text-sm focus:border-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
+              placeholder="admin@singarisarees.com"
+              className="mt-1.5 h-11 w-full rounded-lg border border-beige bg-ivory px-4 text-sm focus:border-maroon focus:outline-none focus:ring-2 focus:ring-maroon/10 transition-all"
             />
             {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message as string}</p>}
           </div>
           <div>
-            <label htmlFor="password" className="text-sm font-medium text-[#334155]">Password</label>
+            <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-maroon-dark">
+              Password
+            </label>
             <div className="relative mt-1.5">
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 {...register('password')}
-                className="h-11 w-full rounded-lg border border-[#e2e8f0] px-4 pr-11 text-sm focus:border-[#0f172a] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
+                placeholder="••••••••"
+                className="h-11 w-full rounded-lg border border-beige bg-ivory px-4 pr-11 text-sm focus:border-maroon focus:outline-none focus:ring-2 focus:ring-maroon/10 transition-all"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-0 flex items-center px-3 text-[#64748b] hover:text-[#0f172a]"
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-muted hover:text-maroon transition-colors"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -96,7 +106,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="h-11 w-full rounded-lg bg-[#0f172a] text-sm font-semibold text-white transition-colors hover:bg-[#1e293b] disabled:opacity-60"
+            className="mt-2 h-11 w-full rounded-lg bg-maroon text-sm font-serif font-semibold tracking-wider text-white transition-all duration-300 hover:bg-maroon-dark hover:shadow-lg hover:shadow-maroon/20 active:scale-[0.99] disabled:opacity-60 disabled:pointer-events-none"
           >
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>

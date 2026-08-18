@@ -70,7 +70,7 @@ export function ProductCard({ product, variant = 'default', priority = false }: 
           )}
         </div>
         <div className="px-2 py-3 text-center sm:px-3 sm:py-4 sm:text-left">
-          <h3 className="line-clamp-2 font-serif text-sm text-charcoal transition-colors group-hover:text-maroon sm:text-base">
+          <h3 className="line-clamp-2 font-serif text-sm text-maroon transition-colors group-hover:text-maroon-dark sm:text-base">
             {product.name}
           </h3>
           <div className="mt-1 flex flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 sm:justify-start">
