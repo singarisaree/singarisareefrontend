@@ -22,7 +22,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
     <Link
       href={href}
       prefetch
-      className="group relative block overflow-hidden rounded-lg"
+      className="group relative block overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-500"
       onMouseEnter={warmRoute}
       onFocus={warmRoute}
       onTouchStart={warmRoute}
@@ -43,14 +43,24 @@ export function CategoryCard({ category }: CategoryCardProps) {
             <span className="font-serif text-4xl text-maroon/20">{category.name.charAt(0)}</span>
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-charcoal-dark/70 via-charcoal-dark/20 to-transparent" />
-        <div className="absolute bottom-0 left-0 p-4 sm:p-5">
-          <h3 className="font-serif text-[1.09375rem] font-medium tracking-wide text-white sm:text-[1.25rem]">
-            {category.name}
-          </h3>
-          <span className="mt-1 inline-flex items-center gap-1 text-[0.65rem] font-semibold tracking-[0.15em] text-gold-light transition-colors group-hover:text-gold sm:text-xs">
+        {/* Deep rich dark overlay gradient at the bottom for high legibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
+        
+        {/* Content Section */}
+        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 flex flex-col items-start gap-3 sm:gap-4">
+          <div className="space-y-1.5 text-left">
+            {category.description && (
+              <span className="block text-[0.6rem] font-semibold tracking-[0.2em] text-gold uppercase sm:text-[0.7rem]">
+                {category.description}
+              </span>
+            )}
+            <h3 className="font-serif text-xl font-bold leading-tight text-white sm:text-[1.625rem] md:text-3xl line-clamp-2">
+              {category.name}
+            </h3>
+          </div>
+          <span className="inline-flex items-center gap-1.5 border border-gold/60 px-3.5 py-1.5 text-[0.65rem] font-semibold tracking-[0.15em] text-gold rounded bg-transparent transition-all duration-300 group-hover:border-gold group-hover:bg-gold group-hover:text-black sm:text-xs">
             SHOP NOW
-            <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
           </span>
         </div>
       </div>
