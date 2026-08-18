@@ -2,10 +2,39 @@
 
 import { Suspense, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { usePathname } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter, usePathname } from 'next/navigation';
+import { adminAuthService } from '@/services/admin.service';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
 import { NetworkGuard } from '@/components/network-guard';
 import { AdminRealtimeSync } from '@/components/admin/admin-realtime-sync';
+
+function AdminAuthGuard({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['admin-me'],
+    queryFn: () => adminAuthService.me(),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f8fafc]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (isError || !data?.admin) {
+    if (typeof window !== 'undefined') {
+      router.replace('/admin/login');
+    }
+    return null;
+  }
+
+  return <>{children}</>;
+}
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,7 +44,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // Keep list cache warm so back from detail feels instant
             staleTime: 2 * 60_000,
             gcTime: 15 * 60 * 1000,
             retry: 1,
@@ -29,7 +57,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const inner = isLogin ? (
     <>{children}</>
   ) : (
-    <>
+    <AdminAuthGuard>
       <AdminRealtimeSync />
       <NetworkGuard />
       <Suspense fallback={null}>
@@ -38,7 +66,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="lg:pl-[12.5rem]">
         <main className="p-6 lg:p-8">{children}</main>
       </div>
-    </>
+    </AdminAuthGuard>
   );
 
   return <QueryClientProvider client={queryClient}>{inner}</QueryClientProvider>;
