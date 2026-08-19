@@ -44,8 +44,8 @@ export function CategoryCard({ category }: CategoryCardProps) {
             <span className="font-serif text-4xl text-maroon/20">{category.name.charAt(0)}</span>
           </div>
         )}
-        {/* Subtle dark overlay gradient at the bottom for text legibility */}
-        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        {/* Dark overlay gradient only at the bottom for text legibility */}
+        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/85 via-black/92 to-transparent" />
         
         {/* Content Section */}
         <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 flex flex-col items-start gap-3 sm:gap-4">

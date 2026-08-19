@@ -161,9 +161,10 @@ export function Navbar() {
   }, [mobileOpen]);
 
   const showAnnouncement =
-    settings?.announcement_bar_enabled === undefined ||
-    settings?.announcement_bar_enabled === true ||
-    String(settings?.announcement_bar_enabled) === 'true';
+    pathname === '/' &&
+    (settings?.announcement_bar_enabled === undefined ||
+      settings?.announcement_bar_enabled === true ||
+      String(settings?.announcement_bar_enabled) === 'true');
   const announcementMain =
     settings?.announcement_bar_text || 'FREE SHIPPING on Orders Above Rs. 1999';
   const announcementSecondary = settings?.announcement_bar_secondary_text || '';
