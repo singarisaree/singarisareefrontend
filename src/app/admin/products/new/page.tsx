@@ -204,8 +204,8 @@ export default function AdminAddProductPage() {
       toast.error('Please fill required fields');
       return;
     }
-    if (!/^\d{6}$/.test(sku.trim())) {
-      toast.error('SKU must be exactly 6 digits');
+    if (!/^[a-zA-Z0-9]{1,10}$/.test(sku.trim())) {
+      toast.error('SKU must be alphanumeric and up to 10 characters');
       return;
     }
     if (description.trim().length < 10) {
@@ -271,15 +271,14 @@ export default function AdminAddProductPage() {
             <label htmlFor="sku" className="text-sm font-medium text-[#334155]">SKU *</label>
             <input
               id="sku"
-              inputMode="numeric"
-              pattern="\d{6}"
-              maxLength={6}
+              pattern="[a-zA-Z0-9]{1,10}"
+              maxLength={10}
               value={sku}
-              onChange={(e) => setSku(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="6 digits e.g. 482917"
+              onChange={(e) => setSku(e.target.value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 10))}
+              placeholder="e.g. SKU12345"
               className="h-10 w-full rounded-lg border border-[#e2e8f0] px-3 font-mono text-sm tracking-wider focus:border-[#0f172a] focus:outline-none"
             />
-            <p className="text-xs text-[#64748b]">Exactly 6 digits. Must be unique for each product.</p>
+            <p className="text-xs text-[#64748b]">Alphanumeric, up to 10 characters. Must be unique for each product.</p>
           </div>
           <div className="space-y-2">
             <label htmlFor="categoryId" className="text-sm font-medium text-[#334155]">Category *</label>

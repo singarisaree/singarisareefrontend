@@ -1,3 +1,5 @@
+'use client';
+
 import Image from 'next/image';
 import { ProductCardLink } from '@/components/products/product-card-link';
 import { ProductLikeButton } from '@/components/products/product-like-button';
@@ -15,8 +17,23 @@ export function ProductCard({ product, variant = 'default', priority = false }: 
   const discount = calculateDiscount(product.mrp, product.effectivePrice);
   const productHref = `/product/${product.slug}`;
 
+  const preloadImage = () => {
+    if (product.defaultImage) {
+      const linkId = `preload-${product.id}`;
+      if (!document.getElementById(linkId)) {
+        const link = document.createElement('link');
+        link.id = linkId;
+        link.rel = 'preload';
+        link.as = 'image';
+        link.href = product.defaultImage;
+        document.head.appendChild(link);
+      }
+    }
+  };
+
   return (
-    <ProductCardLink href={productHref} className="group block">
+    <div onMouseEnter={preloadImage}>
+      <ProductCardLink href={productHref} className="group block">
       <article className="overflow-hidden rounded-lg border border-black/5 bg-white">
         <div className="relative aspect-[3/4] overflow-hidden bg-beige">
           {product.defaultImage ? (
@@ -95,5 +112,6 @@ export function ProductCard({ product, variant = 'default', priority = false }: 
         </div>
       </article>
     </ProductCardLink>
+    </div>
   );
 }

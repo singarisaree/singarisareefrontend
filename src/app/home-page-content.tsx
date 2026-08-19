@@ -55,7 +55,12 @@ export async function HomePageContent() {
     <>
       <HomeShowcasePreload items={showcaseItems} />
       <HomeInstagramPreload reels={instagramReels} />
-      <HeroImagePreload banners={banners} />
+      <HeroImagePreload
+        banners={banners}
+        categories={categories}
+        products={products}
+        ourStoryImageUrl={settings.our_story_image_url}
+      />
       <HeroSection banners={banners} />
       <StoreSettingsSync settings={settings} />
       <ProductRoutesPrefetch slugs={products.slice(0, 24).map((p) => p.slug)} />

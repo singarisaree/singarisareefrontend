@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -55,9 +55,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
     });
   }, [product]);
 
-  const images = selectedColor?.images || [];
-  const galleryImages =
-    images.length > 0
+  const galleryImages = useMemo(() => {
+    const images = selectedColor?.images || [];
+    return images.length > 0
       ? images
       : product.defaultImage
         ? [{
@@ -68,6 +68,23 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             isDefault: true,
           }]
         : [];
+  }, [selectedColor, product.defaultImage, product.name]);
+
+  useEffect(() => {
+    galleryImages.forEach((img) => {
+      if (img.url) {
+        const linkId = `preload-${img.id}`;
+        if (!document.getElementById(linkId)) {
+          const link = document.createElement('link');
+          link.id = linkId;
+          link.rel = 'preload';
+          link.as = 'image';
+          link.href = img.url;
+          document.head.appendChild(link);
+        }
+      }
+    });
+  }, [galleryImages]);
   const firstImage = galleryImages[0]?.url || product.defaultImage;
   const currentImage = galleryImages[selectedImageIndex]?.url || firstImage;
   const discount = calculateDiscount(product.mrp, product.effectivePrice);

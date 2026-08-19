@@ -546,6 +546,7 @@ export interface PublicSettings {
   announcement_bar_enabled?: boolean | string;
   announcement_bar_text?: string;
   announcement_bar_secondary_text?: string;
+  announcement_bar_bg_color?: string;
   estimated_delivery_days?: number;
   our_story_image_url?: string;
 }

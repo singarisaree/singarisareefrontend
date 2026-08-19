@@ -194,7 +194,10 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full max-w-full">
       {/* Announcement bar — single line; horizontally scrollable when text exceeds width */}
       {showAnnouncement && (
-        <div className="announcement-scroll max-w-full bg-charcoal-dark text-xs tracking-wide text-white sm:text-sm">
+        <div
+          className="announcement-scroll max-w-full bg-charcoal-dark text-xs tracking-wide text-white sm:text-sm"
+          style={settings?.announcement_bar_bg_color ? { backgroundColor: settings.announcement_bar_bg_color } : undefined}
+        >
           <p className="mx-auto flex w-max min-w-full items-center justify-center gap-x-2 whitespace-nowrap px-3 py-2">
             <span>{announcementMain}</span>
             {announcementSecondary?.trim() ? (

@@ -32,6 +32,7 @@ const ANNOUNCEMENT_KEYS = new Set([
   "announcement_bar_enabled",
   "announcement_bar_text",
   "announcement_bar_secondary_text",
+  "announcement_bar_bg_color",
 ]);
 
 async function loadAnnouncementSettings() {
@@ -65,6 +66,7 @@ export default function AdminSettingsPage() {
     "FREE SHIPPING on Orders Above Rs. 1999",
   );
   const [announcementSecondary, setAnnouncementSecondary] = useState("");
+  const [announcementBgColor, setAnnouncementBgColor] = useState("");
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -178,6 +180,9 @@ export default function AdminSettingsPage() {
     );
     setAnnouncementSecondary(
       String(map.announcement_bar_secondary_text ?? ""),
+    );
+    setAnnouncementBgColor(
+      String(map.announcement_bar_bg_color ?? ""),
     );
   }, [announcementSettings]);
 
@@ -304,6 +309,11 @@ export default function AdminSettingsPage() {
         {
           key: "announcement_bar_secondary_text",
           value: announcementSecondary.trim(),
+          group: "announcement",
+        },
+        {
+          key: "announcement_bar_bg_color",
+          value: announcementBgColor.trim(),
           group: "announcement",
         },
       ]),
@@ -609,7 +619,39 @@ export default function AdminSettingsPage() {
                   Leave empty to show only the main message.
                 </p>
               </div>
-              <div className="rounded-lg bg-charcoal-dark px-3 py-2 text-center text-xs tracking-wide text-white sm:text-sm">
+              <div className="space-y-2">
+                <label
+                  htmlFor="announcementBgColor"
+                  className="text-sm font-medium text-[#334155]"
+                >
+                  Background Color
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="announcementBgColor"
+                    type="text"
+                    value={announcementBgColor}
+                    onChange={(e) => setAnnouncementBgColor(e.target.value)}
+                    disabled={announcementLoading}
+                    placeholder="#1e293b (default)"
+                    className="h-10 flex-1 rounded-lg border border-[#e2e8f0] px-3 text-sm focus:border-[#0f172a] focus:outline-none"
+                  />
+                  <input
+                    type="color"
+                    value={announcementBgColor.startsWith("#") && announcementBgColor.length === 7 ? announcementBgColor : "#1e293b"}
+                    onChange={(e) => setAnnouncementBgColor(e.target.value)}
+                    disabled={announcementLoading}
+                    className="h-10 w-10 cursor-pointer rounded-lg border border-[#e2e8f0] p-1"
+                  />
+                </div>
+                <p className="text-xs text-[#64748b]">
+                  Choose or type a hex color code (e.g. #1e293b).
+                </p>
+              </div>
+              <div
+                className="rounded-lg bg-charcoal-dark px-3 py-2 text-center text-xs tracking-wide text-white sm:text-sm"
+                style={announcementBgColor ? { backgroundColor: announcementBgColor } : undefined}
+              >
                 <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5">
                   <span>{announcementText || "…"}</span>
                   {announcementSecondary.trim() ? (
