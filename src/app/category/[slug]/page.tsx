@@ -69,6 +69,11 @@ export default async function CategoryPage({ params }: Props) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(crumbsLd) }}
       />
       <ProductRoutesPrefetch slugs={products.slice(0, 12).map((p) => p.slug)} />
+      {products.slice(0, 4).map((prod) => (
+        prod.defaultImage ? (
+          <link key={`preload-cat-prod-${prod.id}`} rel="preload" as="image" href={prod.defaultImage} />
+        ) : null
+      ))}
       <div className="bg-beige py-6 pattern-mandala sm:py-12">
         <div className="mx-auto max-w-[90rem] px-4 text-center sm:px-6 lg:px-10">
           <p className="text-xs font-semibold tracking-[0.3em] text-maroon">COLLECTION</p>

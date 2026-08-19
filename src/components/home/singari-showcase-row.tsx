@@ -1,12 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { resolveStorefrontImageUrl } from '@/lib/image';
 import { preloadShowcaseVideo, preloadShowcaseVideos } from '@/lib/preload-showcase-videos';
-import { toast } from '@/lib/toast';
-import { useCartStore } from '@/stores/cart-store';
 import type { ShowcaseItem } from '@/types';
 
 type Props = {
@@ -24,7 +22,6 @@ const ShowcaseTile = memo(function ShowcaseTile({
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const router = useRouter();
-  const addItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {
     const el = ref.current;
@@ -43,33 +40,6 @@ const ShowcaseTile = memo(function ShowcaseTile({
     play();
     return () => observer.disconnect();
   }, [videoSrc]);
-
-  const canPurchase = !item.isComingSoon && !item.isOutOfStock && item.maxStock > 0;
-
-  const handleBuyNow = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!canPurchase) {
-        toast.error('This product is unavailable');
-        return;
-      }
-      addItem({
-        productId: item.productId,
-        productColorId: item.productColorId,
-        productName: item.productName,
-        colorName: item.colorName,
-        slug: item.slug,
-        imageUrl: item.imageUrl || '',
-        price: item.price,
-        mrp: item.mrp,
-        maxStock: item.maxStock,
-        quantity: 1,
-      });
-      router.push('/checkout');
-    },
-    [addItem, canPurchase, item, router],
-  );
 
   return (
     <div className="relative aspect-[9/16] w-[42vw] max-w-[11rem] shrink-0 snap-start overflow-hidden rounded-xl bg-charcoal sm:w-44 lg:w-48">
@@ -100,17 +70,12 @@ const ShowcaseTile = memo(function ShowcaseTile({
         />
       </Link>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-gradient-to-t from-black/80 via-black/40 to-transparent px-2 pb-2 pt-10">
-        <p className="pointer-events-none w-full line-clamp-2 text-[10px] font-medium leading-snug text-white sm:text-xs">
-          {item.productName}
-        </p>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex flex-col items-center bg-gradient-to-t from-black/60 to-transparent px-2 pb-3 pt-12">
         <button
           type="button"
-          onClick={handleBuyNow}
-          disabled={!canPurchase}
-          className="pointer-events-auto mt-1 w-[66%] rounded-full bg-cream/95 px-1 py-0.5 text-[7px] font-semibold uppercase tracking-wide text-maroon shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50 sm:text-[8px]"
+          className="pointer-events-none rounded-full bg-cream/95 px-4 py-1.5 text-[9px] font-bold uppercase tracking-widest text-maroon shadow-sm transition group-hover:bg-white sm:text-[10px]"
         >
-          Buy now
+          View
         </button>
       </div>
     </div>
