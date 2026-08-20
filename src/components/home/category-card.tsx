@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowRight } from 'lucide-react';
 import type { Category } from '@/types';
 import { resolveStorefrontImageUrl } from '@/lib/image';
 
@@ -19,6 +18,8 @@ export function CategoryCard({ category }: CategoryCardProps) {
     router.prefetch(href);
   };
 
+  const imageUrl = category.imageUrl ? resolveStorefrontImageUrl(category.imageUrl) : null;
+
   return (
     <Link
       href={href}
@@ -29,15 +30,15 @@ export function CategoryCard({ category }: CategoryCardProps) {
       onTouchStart={warmRoute}
     >
       <div className="relative aspect-[3/4.6] sm:aspect-[3/4] overflow-hidden rounded-lg bg-beige">
-        {category.imageUrl ? (
+        {imageUrl ? (
           <Image
-            src={resolveStorefrontImageUrl(category.imageUrl)}
+            src={imageUrl}
             alt={category.name}
             fill
             sizes="(max-width: 640px) 42vw, (max-width: 1024px) 11rem, 14rem"
             className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
             loading="lazy"
-            quality={80}
+            quality={100}
           />
         ) : (
           <div className="flex h-full items-center justify-center bg-gradient-to-b from-beige to-maroon/10">
@@ -45,7 +46,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
           </div>
         )}
         {/* Dark overlay gradient only at the bottom for text legibility */}
-        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-black/85 via-black/92 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-black/70 via-black/70 to-transparent" />
         
         {/* Content Section */}
         <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 flex flex-col items-start gap-3 sm:gap-4">
@@ -59,10 +60,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
               {category.name}
             </h3>
           </div>
-          <span className="inline-flex items-center gap-1.5 border border-gold/60 px-3.5 py-1.5 text-[0.65rem] font-semibold tracking-[0.15em] text-gold rounded bg-transparent transition-all duration-300 group-hover:border-gold group-hover:bg-gold group-hover:text-black sm:text-xs">
-            SHOP NOW
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-          </span>
+          
         </div>
       </div>
     </Link>
