@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter, usePathname } from 'next/navigation';
@@ -44,15 +44,30 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 2 * 60_000,
+            staleTime: 0,
             gcTime: 15 * 60 * 1000,
             retry: 1,
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
+            refetchOnMount: true,
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
+            refetchInterval: 10 * 1000, // Background refresh every 10 seconds
           },
         },
       }),
   );
+
+  useEffect(() => {
+    if (isLogin) return;
+
+    const handleAction = () => {
+      void queryClient.invalidateQueries();
+    };
+
+    window.addEventListener('admin-action-succeeded', handleAction);
+    return () => {
+      window.removeEventListener('admin-action-succeeded', handleAction);
+    };
+  }, [queryClient, isLogin]);
 
   const inner = isLogin ? (
     <>{children}</>

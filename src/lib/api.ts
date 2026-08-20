@@ -43,7 +43,22 @@ function isCustomerAuthRequest(url: string) {
 }
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const method = response.config.method?.toUpperCase();
+    const url = response.config.url ?? '';
+    if (
+      method &&
+      ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) &&
+      typeof window !== 'undefined' &&
+      window.location.pathname.startsWith('/admin') &&
+      !url.includes('/auth/refresh') &&
+      !url.includes('/auth/login') &&
+      !url.includes('/auth/logout')
+    ) {
+      window.dispatchEvent(new Event('admin-action-succeeded'));
+    }
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
