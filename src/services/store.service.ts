@@ -15,6 +15,7 @@ import type {
   ShippingQuoteResult,
   QuickQuoteResult,
   ShippingCountryOption,
+  ShowcaseItem,
 } from '@/types';
 
 export const productService = {
@@ -38,6 +39,20 @@ export const homeService = {
     storeGet<CustomerReview[]>(`/reviews/product/${productId}`),
   getInstagram: () => storeGet<InstagramFeed[]>('/instagram'),
   getSettings: () => storeGet<PublicSettings>('/settings/public'),
+  getHomepage: () =>
+    storeGet<{
+      banners: HeroBanner[];
+      categories: Category[];
+      products: Product[];
+      settings: PublicSettings;
+      instagramReels: Array<{
+        id: string;
+        videoUrl: string;
+        instagramUrl: string;
+        sortOrder: number;
+      }>;
+      showcaseItems: ShowcaseItem[];
+    }>('/storefront/homepage'),
 };
 
 export const storefrontService = {
