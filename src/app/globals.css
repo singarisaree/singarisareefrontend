@@ -130,24 +130,29 @@ optgroup {
   animation: shimmer 1.5s infinite;
 }
 
-/* Announcement bar: single-line horizontal scroll when text exceeds width */
-.announcement-scroll {
-  overflow-x: auto;
-  overflow-y: hidden;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.35) transparent;
+/* Announcement bar auto-scroll marquee */
+.announcement-marquee-container {
+  overflow: hidden;
+  width: 100%;
 }
 
-.announcement-scroll::-webkit-scrollbar {
-  height: 3px;
+.announcement-marquee-content {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 25s linear infinite;
 }
 
-.announcement-scroll::-webkit-scrollbar-track {
-  background: transparent;
+@keyframes marquee-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
 }
 
-.announcement-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.35);
-  border-radius: 999px;
+@media (hover: hover) {
+  .announcement-marquee-container:hover .announcement-marquee-content {
+    animation-play-state: paused;
+  }
 }

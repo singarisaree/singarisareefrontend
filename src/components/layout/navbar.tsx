@@ -193,23 +193,27 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full max-w-full">
-      {/* Announcement bar — single line; horizontally scrollable when text exceeds width */}
+      {/* Announcement bar — auto scrolling marquee */}
       {showAnnouncement && (
         <div
-          className="announcement-scroll max-w-full bg-charcoal-dark text-xs tracking-wide text-white sm:text-sm"
+          className="announcement-marquee-container bg-charcoal-dark text-xs tracking-wide text-white sm:text-sm py-2"
           style={settings?.announcement_bar_bg_color ? { backgroundColor: settings.announcement_bar_bg_color } : undefined}
         >
-          <p className="mx-auto flex w-max min-w-full items-center justify-center gap-x-2 whitespace-nowrap px-3 py-2">
-            <span>{announcementMain}</span>
-            {announcementSecondary?.trim() ? (
-              <>
-                <span className="text-white/50" aria-hidden>
-                  |
-                </span>
-                <span>{announcementSecondary}</span>
-              </>
-            ) : null}
-          </p>
+          <div className="announcement-marquee-content flex gap-x-16">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="flex shrink-0 items-center gap-x-4 whitespace-nowrap">
+                <span>{announcementMain}</span>
+                {announcementSecondary?.trim() ? (
+                  <>
+                    <span className="text-white/50" aria-hidden>
+                      |
+                    </span>
+                    <span>{announcementSecondary}</span>
+                  </>
+                ) : null}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

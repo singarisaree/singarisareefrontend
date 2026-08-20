@@ -189,6 +189,15 @@ export default function AdminUsersPage() {
     onError: () => toast.error('Failed to add user — phone may already exist'),
   });
 
+  const syncMutation = useMutation({
+    mutationFn: () => adminCustomerService.syncFromOrders(),
+    onSuccess: (result) => {
+      toast.success(`Synced ${result.synced} users successfully (total: ${result.total})`);
+      queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
+    },
+    onError: () => toast.error('Failed to sync users from orders'),
+  });
+
   const sendMutation = useMutation({
     mutationFn: () =>
       adminMarketingService.send({
@@ -345,6 +354,15 @@ export default function AdminUsersPage() {
                 />
               </DataTableToolbar>
               <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => syncMutation.mutate()}
+                  disabled={syncMutation.isPending}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+                  Sync From Orders
+                </button>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(true)}
